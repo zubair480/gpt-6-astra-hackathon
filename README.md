@@ -1,126 +1,128 @@
-# PLVA private reasoning module
+# PLVA — hackathon demo
 
-Optional, loopback-only local reasoning service for the [PLVA](https://github.com/dael-amz/browser-agent-privacy-layer)
-privacy core. It answers three narrow questions so private data never has to be shown to the
-cloud model:
+Next implementation priority: [ordinary websites first, native desktop second](BROWSER-FIRST-MULTI-SESSION-PLAN.md).
+The app now opens ordinary websites in a dedicated, visible Edge browser on Windows.
 
-| Endpoint | Question | Result |
-| --- | --- | --- |
-| `POST /v1/approve` | May this token be resolved into this tool argument at this destination? | `approve` with a clamped scope, or `deny` |
-| `POST /v1/compute` | Sort or select over explicitly supplied private values | input tokens only, never values |
-| `POST /v1/review-trace` | Given a value-free event trace, continue, warn, or halt? | `continue` / `warn` / `halt` |
+A Windows browser demo of private computer use: protect a screenshot locally, send
+placeholder tokens to Astra, resolve them only while typing into matching fields,
+and mask the filled form and receipt again.
 
-The service **recommends**; the PLVA core enforces. It cannot grant itself access, change
-policy, execute actions, read the vault, or stop the agent. It never calls a cloud model.
+## Run on Windows
 
-## Status
+Requires Python 3.12+ and Microsoft Edge. From PowerShell:
 
-| Track | State |
-| --- | --- |
-| Frozen v1 contracts (`contracts/v1/`) | done: JSON Schema 2020-12, OpenAPI 3.1, examples, reason codes |
-| Deterministic mock service (`plva-pr-mock`) | done: loopback, per-launch bearer credential, fixed error bodies, replay guard |
-| Thin stdlib client + fake core | see `docs/INTEGRATION.md` |
-| Real local inference (Qwen via llama.cpp) | see `docs/MODEL.md` |
-| Isolation (NemoClaw/OpenShell) and deny evidence | see `docs/SECURITY.md` |
-| Agent demo (`plva_agent_demo`) | done: Playwright browser, DOM redaction, vault, GPT-6 Astra planner, operator UI |
-| Final handoff | `docs/HANDOFF.md` |
+```powershell
+.\start.ps1
+```
 
-`STATUS.md` tracks owners, checks, and blockers.
+First setup installs requirements and provisions pinned English OCR assets over
+the network. Screenshot OCR then runs locally on the CPU.
 
-## Quickstart (mock, no model, no credentials)
+Open http://127.0.0.1:18080. Enter a website URL, choose **Open website**, and
+inspect the protected preview. Open, tab selection, and preview do not call Astra.
+Browse in the dedicated Edge window; refresh the preview after changing its page.
+Only this managed browser is in scope.
 
-Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/).
+For live computer use, expand **Astra connection**, enter your hackathon API key
+locally, save, enter your task, and select **Start live Astra**. Alternatively set `OPENAI_API_KEY`
+before starting the server. Keys stay in process memory; restarting clears keys
+entered through the UI. The provider adapter targets `gpt-6-astra` through the
+Responses API's native `computer` tool.
+
+## Ordinary website demo
+
+1. Open Amazon or another HTTPS site through PLVA.
+2. Inspect locally detected masks. The original screenshot is available locally
+   when you enable its preview; it is not a model input.
+3. Start a benign Astra task, such as describing the current page and navigating
+   to example.com to report its heading.
+4. Inspect each actual request's protected PNG, frame hash, returned model,
+   response ID, usage and actions. Navigation and later screenshots use PLVA too.
+5. Stop Astra to pause work; close the browser to end the privacy session.
+
+The collapsed **Old fixture rehearsal** exercises the original prepared workflow
+below. It is scripted and makes zero model calls.
+
+## Original prepared workflow
+
+1. The support ticket shows synthetic customer details and an irrelevant fake key.
+2. The operator sees the original screenshot alongside the protected screenshot.
+3. The agent copies tokens such as `[EMAIL_1]` into the replacement form.
+4. PLVA substitutes the actual value locally, in the matching private input.
+5. The receiver checks all six submitted fields; the resulting receipt is masked.
+6. Inspect outgoing requests to see the actual sanitized request bodies and images.
+
+The latest protected frame may be newer than the most recent cloud request. The
+request inspector is the definitive record of what was submitted. Rehearsal entries
+are explicitly marked not transmitted.
+
+## Deliberate scope
+
+Ordinary-site mode detects supported email, phone, name, address and credential
+patterns from screenshot pixels using local OCR. It does not need website
+annotations or a preloaded list of customer values. Names and addresses depend on
+recognizable English context; small, clipped or unusual text can be missed.
+Context rules can also mask non-private labels; this was observed on a form.
+This is a hackathon detector, not a promise to find every private value on every
+website. Inspect the preview before sending. See the current evidence and limits
+in [the test report](docs/BROWSER-TEST-REPORT.md).
+
+Private tokens resolve only inside local typing actions at approved destinations.
+Secrets, unknown tokens and ambiguous destinations are blocked. Website access
+gates may require a manual step. Native desktop control is the next phase.
+The old prepared fixture alone still uses `data-private` annotations. Its sample
+API key is fake and blocked; its contact tokens are usable. DOM dumps and original
+screenshots are not included in ordinary-site model requests.
+
+Qwen/NemoClaw and automatic skill synthesis are independent teammate workstreams.
+There is no required Docker, WSL, NVIDIA, or Apple dependency. Protected evidence
+can be downloaded from `/api/export`; this small demo schema is a starting point
+for the teammate adapter, not a claim of completed skill integration.
+
+## Files and checks
+
+Current ordinary-site evidence: a real Astra run completed Amazon → example.com
+in two API responses. A second run used a fresh synthetic email on HTTPBin,
+resolved its token locally, scrolled and navigated to example.com in five real
+responses. Independent real-site tests checked email/phone masking, the next
+typed frame, scrolling and tab transitions. See the
+[status board](docs/BROWSER-STATUS.md) and [operator guide](docs/BROWSER-USER-TESTS.md).
+The latest [fresh flow test](docs/FLOW-TEST-REPORT.md) includes the Windows startup
+fix and a six-response live rerun with submitted post-type pixel verification.
+
+- `plva/privacy.py`: screenshot masking, memory-only values, tokens and scrubbing.
+- `plva/browser/`: managed Edge capture, navigation, tabs and local action gates.
+- `plva/detection/`: local screenshot OCR, classification and model provisioning.
+- `plva/web_runtime.py`: ordinary-site observation, actions and stop handling.
+- `plva/provider.py`: protected Astra payloads and provider receipts.
+- `plva/runtime.py`: original prepared-fixture regression workflow.
+- `plva/server.py`: local operator API, receipt receiver and evidence export.
+- `static/`: viewer and sample workflow.
+
+```powershell
+python -m unittest discover -s tests -v
+node --check static/app.js
+```
+
+Historical prepared-fixture verification on September 8, 2026: 12 tests passed and a live `gpt-6-astra`
+run completed in four API calls. Four private tokens were resolved locally; the
+receiver verified all six submitted fields. Outgoing JSON records contained no
+plaintext fixture values or API key. Screenshot masking is covered by pixel tests;
+this is not a claim of general PII detection beyond the annotated demo fields.
+
+No real shipment is purchased or sent. Live Astra requires an API key with access
+to the hackathon model. The server loads `OPENAI_API_KEY` from the environment or
+the Git-ignored local `.env` file.
+
+## Private reasoning module and agent demo
+
+The optional local reasoning service (approve / compute / review-trace over loopback, real
+Qwen3-1.7B inference, sandbox isolation evidence) and the URL-plus-task browser-agent demo live
+in `src/plva_private_reasoning` and `src/plva_agent_demo`. Full guide:
+[docs/PRIVATE-REASONING.md](docs/PRIVATE-REASONING.md). Quickstart:
 
 ```bash
-uv sync --group dev
-uv run plva-pr-mock            # binds 127.0.0.1:18555, writes .plva-pr/credential (0600)
+uv sync --group dev --group demo --extra local && uv run playwright install chromium
+uv run plva-pr-mock                                   # or sandbox/start.sh --backend macos-dev
+uv run python -m plva_agent_demo.ui --port 3000       # open http://localhost:3000
 ```
-
-In another shell:
-
-```bash
-CRED=$(cat .plva-pr/credential)
-curl -s -H "Authorization: Bearer $CRED" http://127.0.0.1:18555/v1/readiness
-curl -s -H "Authorization: Bearer $CRED" -H 'Content-Type: application/json' \
-  --data @contracts/v1/examples/approve-request.json http://127.0.0.1:18555/v1/approve
-```
-
-Mock mode identifies itself (`"mode": "mock"`, `"ready_for_private_values": false`). The
-client refuses to send real private values to it unless explicitly overridden for tests.
-
-## Agent demo: URL + task in, private run out
-
-`src/plva_agent_demo` is a standalone showcase of the whole loop. The cloud planner
-(OpenAI `gpt-6-astra`) sees only redacted frames and a value-free token manifest; this module
-answers approve / compute / review-trace locally.
-
-```bash
-cp -n .env.example .env            # set OPENAI_API_KEY; OPENAI_MODEL=gpt-6-astra
-uv sync --group dev --group demo && uv run playwright install chromium
-uv run plva-pr-mock                # or the real local model: see docs/MODEL.md + sandbox/start.sh
-uv run python -m plva_agent_demo.ui --port 3000   # open http://localhost:3000
-```
-
-Measured on 2026-09-08 (M2, 8 GB) against the real local Qwen3-1.7B service with verified
-isolation (macOS `sandbox-exec` dev backend):
-
-| Task on the synthetic Acme page | Steps | Outcome | Private-reasoning call |
-| --- | --- | --- | --- |
-| Paste my Acme API key into Connect analytics and click Connect | 4 | done, key typed locally only | approve → POLICY_MATCH, 2.5 s |
-| List the team members sorted alphabetically by name | 3 | done, correct order as tokens | compute/sort → COMPLETED, 3.9 s |
-| Find a phone number on mozilla.org/contact (real site) | 8 | no number exists; agent stopped at the step cap without inventing one | none |
-
-GPT-6 Astra step latency 3 to 5 s; redaction 40 to 100 ms; 0 leaks over every outbound body.
-
-## Tests and checks
-
-```bash
-uv run pytest -q
-uv run ruff check src tests && uv run ruff format --check src tests
-uv run mypy
-uv run python scripts/export_contracts.py --check   # frozen contracts match the models
-```
-
-## Contract rules (v1)
-
-- Every request carries `schema_version: "1.0"`, `session_id`, `request_id`; they are echoed back
-  and are correlation data only, never authorization.
-- Unknown fields, wrong types, oversize bodies (> 64 KiB), malformed tokens, and duplicate tokens
-  are rejected with a fixed body `{"schema_version":"1.0","error_code":"SCHEMA_INVALID"}`.
-  Rejected input is never echoed.
-- A repeated `(session_id, request_id)` is rejected with `409 DUPLICATE_REQUEST`.
-- Every endpoint except `GET /health` requires `Authorization: Bearer <per-launch credential>`.
-  Requests with an `Origin` header or an unexpected `Host` are refused.
-- Approve: missing policy, unverified destination, blocked class, origin/field/tool outside the
-  allowlists are denied deterministically before any reasoning runs. A recommendation can only
-  shrink TTL and use count; it can never widen token, tool, path, origin, or field.
-- Compute: 2 to 40 items, 500 chars per value, 500 chars of instruction. Sort returns an exact
-  permutation of the input tokens; select returns a unique subset with the requested count.
-  Anything else is `status: "error"`, `tokens: []`.
-- Review-trace: `blocked_class_attempt` (when the policy says so), `destination_mismatch`,
-  `token_invalid`, or repeated denials inside the window halt regardless of the backend.
-- Values and raw completions live only in request-scoped memory. Nothing is logged.
-
-Reason codes are fixed and listed in `contracts/v1/reason-codes.json`.
-
-## Layout
-
-```text
-contracts/v1/                 frozen schemas, openapi.json, examples/, reason-codes.json
-src/plva_private_reasoning/
-  contracts.py                runtime twin of the schemas (pydantic, extra=forbid)
-  operations/                 approve / compute / review_trace with deterministic guards
-  service/                    loopback transport, auth, replay guard, fixed error bodies
-  model/                      local inference adapter (llama.cpp) and constrained parser
-  client/                     stdlib client, fake core example
-sandbox/                      isolation policy, launcher, empirical deny checks
-tests/                        unit, contract, service, client, model, sandbox
-docs/                         INTEGRATION.md, SECURITY.md, MODEL.md, HANDOFF.md
-scripts/export_contracts.py   regenerates and drift-checks contracts/v1
-```
-
-## Provenance
-
-Built during the GPT-6 Astra hackathon as new work. Architecture and lessons are drawn from
-the PLVA reference (`reference/browser-agent-privacy-layer`, commit `467a452`); no reference
-code is vendored. No model weights, credentials, or private traces are committed.

@@ -1,7 +1,10 @@
+.rocketride/
 .venv/
 __pycache__/
 *.pyc
 .env
+*.log
+.plva-evidence/
 .plva-pr*/
 .mypy_cache/
 .ruff_cache/
