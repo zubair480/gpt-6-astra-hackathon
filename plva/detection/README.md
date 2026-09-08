@@ -157,3 +157,21 @@ retain the synthetic oracle, empty/filled PNG, OCR regions, findings and field
 clipping measurements locally for replay; never send them to the provider or
 include raw values in exported evidence. Keep exact-value and pixel assertions
 unchanged. No new heavy OCR or browser runs were performed for this source audit.
+
+## Observed contextual false positive
+
+During the coordinator's successful five-call real-Astra HTTPBin token workflow,
+the protected post-typing image showed a `[PHONE_2]` mask over the email label,
+beside the correct `[EMAIL_1]` mask. Session 3 inspected the protected artifact
+`C:/AI/gpt-6-astra-hackathon/.plva-evidence/protected-after-token.png`; it did not
+rerun OCR or the provider workflow. The empty Telephone field is immediately
+above that row. A likely explanation is the classifier's below-label context
+rule selecting the next recognized line as the telephone value; raw OCR regions
+were not inspected to establish that cause conclusively.
+
+This is an observed class/region false positive: masks can hide ordinary labels
+and issue misleading contact-class tokens as well as conceal private data. The
+successful task does not establish classifier precision. No classifier change
+or broad test run was made while the demo was being finalized. Any future guard
+against consuming the next field's label must retain legitimate separate-line
+label/value coverage and be validated against an unchanged pixel oracle.
