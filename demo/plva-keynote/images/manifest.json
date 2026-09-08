@@ -1,0 +1,89 @@
+{
+  "total_seconds": 60,
+  "scenes": [
+    {
+      "scene": 1,
+      "name": "01-ready",
+      "width": 3840,
+      "height": 2160,
+      "duration": 3
+    },
+    {
+      "scene": 2,
+      "name": "02-prompt",
+      "width": 3840,
+      "height": 2160,
+      "duration": 5
+    },
+    {
+      "scene": 3,
+      "name": "03-working",
+      "width": 3840,
+      "height": 2160,
+      "duration": 4
+    },
+    {
+      "scene": 4,
+      "name": "04-privacy",
+      "width": 3840,
+      "height": 2160,
+      "duration": 6
+    },
+    {
+      "scene": 5,
+      "name": "05-execute",
+      "width": 3840,
+      "height": 2160,
+      "duration": 6
+    },
+    {
+      "scene": 6,
+      "name": "06-result",
+      "width": 3840,
+      "height": 2160,
+      "duration": 5
+    },
+    {
+      "scene": 7,
+      "name": "07-learning",
+      "width": 3840,
+      "height": 2160,
+      "duration": 5
+    },
+    {
+      "scene": 8,
+      "name": "08-skill",
+      "width": 3840,
+      "height": 2160,
+      "duration": 5
+    },
+    {
+      "scene": 9,
+      "name": "09-new-task",
+      "width": 3840,
+      "height": 2160,
+      "duration": 5
+    },
+    {
+      "scene": 10,
+      "name": "10-reuse",
+      "width": 3840,
+      "height": 2160,
+      "duration": 6
+    },
+    {
+      "scene": 11,
+      "name": "11-second-result",
+      "width": 3840,
+      "height": 2160,
+      "duration": 6
+    },
+    {
+      "scene": 12,
+      "name": "12-close",
+      "width": 3840,
+      "height": 2160,
+      "duration": 4
+    }
+  ]
+}
