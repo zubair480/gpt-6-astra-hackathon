@@ -1,0 +1,306 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://plva.local/contracts/v1/event.schema.json",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "event_id": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$"
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "time_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "type": {
+          "enum": [
+            "observation"
+          ]
+        },
+        "frame_id": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$"
+        },
+        "app": {
+          "type": "string",
+          "maxLength": 4000
+        },
+        "text": {
+          "type": "string",
+          "maxLength": 4000
+        },
+        "tokens": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "token": {
+                "type": "string",
+                "pattern": "^[A-Z][A-Z0-9]*_[0-9]+_[a-f0-9]{4,32}$"
+              },
+              "class": {
+                "type": "string",
+                "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$"
+              },
+              "role_hint": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "token",
+              "class"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 256
+        },
+        "public_values": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": "string",
+                "maxLength": 4000
+              },
+              "role_hint": {
+                "type": "string",
+                "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$"
+              }
+            },
+            "required": [
+              "value",
+              "role_hint"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 256
+        }
+      },
+      "required": [
+        "event_id",
+        "sequence",
+        "time_ms",
+        "type",
+        "frame_id"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "event_id": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$"
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "time_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "type": {
+          "enum": [
+            "action"
+          ]
+        },
+        "action_id": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$"
+        },
+        "status": {
+          "enum": [
+            "proposed",
+            "executed",
+            "failed",
+            "blocked"
+          ]
+        },
+        "operation": {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "enum": [
+                "click",
+                "type",
+                "select",
+                "navigate",
+                "wait",
+                "inspect"
+              ]
+            },
+            "target_hint": {
+              "type": "string",
+              "maxLength": 4000
+            },
+            "text": {
+              "type": "string",
+              "maxLength": 4000
+            },
+            "coordinates": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 2
+            }
+          },
+          "required": [
+            "kind",
+            "target_hint"
+          ],
+          "additionalProperties": false
+        },
+        "before_event_id": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$"
+        },
+        "after_event_id": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$"
+        }
+      },
+      "required": [
+        "event_id",
+        "sequence",
+        "time_ms",
+        "type",
+        "action_id",
+        "status",
+        "operation"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "event_id": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$"
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "time_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "type": {
+          "enum": [
+            "correction"
+          ]
+        },
+        "source": {
+          "enum": [
+            "user",
+            "observed_recovery"
+          ]
+        },
+        "text": {
+          "type": "string",
+          "maxLength": 4000
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$"
+          },
+          "maxItems": 256,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "event_id",
+        "sequence",
+        "time_ms",
+        "type",
+        "source",
+        "text",
+        "evidence_ids"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "event_id": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$"
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "time_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "type": {
+          "enum": [
+            "check"
+          ]
+        },
+        "check_id": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$"
+        },
+        "result": {
+          "enum": [
+            "passed",
+            "failed",
+            "unknown"
+          ]
+        },
+        "source": {
+          "enum": [
+            "core_verifier",
+            "user_confirmation",
+            "model_interpretation"
+          ]
+        },
+        "criterion": {
+          "type": "string",
+          "maxLength": 4000
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$"
+          },
+          "maxItems": 256,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "event_id",
+        "sequence",
+        "time_ms",
+        "type",
+        "check_id",
+        "result",
+        "source",
+        "criterion",
+        "evidence_ids"
+      ],
+      "additionalProperties": false
+    }
+  ]
+}

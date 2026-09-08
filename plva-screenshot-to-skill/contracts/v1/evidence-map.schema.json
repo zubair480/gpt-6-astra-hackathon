@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://plva.local/contracts/v1/evidence-map.schema.json",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "enum": [
+        "1.0"
+      ]
+    },
+    "recording_id": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$"
+    },
+    "data_class": {
+      "enum": [
+        "synthetic",
+        "sanitized"
+      ]
+    },
+    "bundle_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "event_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$"
+      },
+      "maxItems": 10000,
+      "uniqueItems": true
+    },
+    "frame_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$"
+      },
+      "maxItems": 1000,
+      "uniqueItems": true
+    },
+    "links": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "target_id": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$"
+          },
+          "event_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$"
+            },
+            "maxItems": 256,
+            "uniqueItems": true
+          },
+          "frame_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$"
+            },
+            "maxItems": 256,
+            "uniqueItems": true
+          },
+          "basis": {
+            "enum": [
+              "observed",
+              "inferred",
+              "user_confirmed"
+            ]
+          }
+        },
+        "required": [
+          "target_id",
+          "event_ids",
+          "frame_ids",
+          "basis"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 1000
+    },
+    "outcome": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "enum": [
+            "unknown",
+            "passed",
+            "failed",
+            "cancelled"
+          ]
+        },
+        "check_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$"
+          },
+          "maxItems": 256,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "status",
+        "check_ids"
+      ],
+      "additionalProperties": false
+    },
+    "local_recording_available": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "schema_version",
+    "recording_id",
+    "data_class",
+    "bundle_digest",
+    "event_ids",
+    "frame_ids",
+    "links",
+    "outcome",
+    "local_recording_available"
+  ],
+  "additionalProperties": false
+}

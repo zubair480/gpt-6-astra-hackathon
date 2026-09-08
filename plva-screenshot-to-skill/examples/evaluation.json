@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "demo_kind": "synthetic_offline",
+  "generation": "deterministic_mock",
+  "source_recording": "recording-demo-001",
+  "source_events": 18,
+  "source_frames": 7,
+  "learned_steps": 5,
+  "source_outcome": "passed_on_synthetic_evidence",
+  "export_status": "candidate",
+  "review_acceptance": "pending_user_review",
+  "fresh_binding_preparation": "ready",
+  "mock_runner_handoff": "passed",
+  "live_astra_synthesis": "not_run",
+  "actual_changed_layout_execution": "pending_main_runtime",
+  "image_redaction_verified": false,
+  "performance_improvement": "not_measured",
+  "tests": {"passed": 59, "failed": 0, "skipped": 0, "duration_seconds": 8.100},
+  "sample_skill": "examples/skills/prepare-a-replacement-shipment-draft-from-a-support-ticket"
+}

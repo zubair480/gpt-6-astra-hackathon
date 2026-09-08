@@ -1,0 +1,144 @@
+{
+  "schema_version": "1.0",
+  "recording_id": "recording-demo-001",
+  "bundle_digest": "f30102df4e272d2f29e437e0b9670b32680aa63591365b674f35095ac0e74b6b",
+  "data_class": "synthetic",
+  "event_ids": [
+    "e1",
+    "e2",
+    "e3",
+    "e4",
+    "e5",
+    "e6",
+    "e7",
+    "e8",
+    "e9",
+    "e10",
+    "e11",
+    "e12",
+    "e13",
+    "e14",
+    "e15",
+    "e16",
+    "e17",
+    "e18"
+  ],
+  "frame_ids": [
+    "frame-0001",
+    "frame-0002",
+    "frame-0003",
+    "frame-0004",
+    "frame-0005",
+    "frame-0006",
+    "frame-0007"
+  ],
+  "links": [
+    {
+      "target_id": "step-cef7fc13a3818093",
+      "event_ids": [
+        "e3",
+        "e1",
+        "e4"
+      ],
+      "frame_ids": [
+        "frame-0001",
+        "frame-0002"
+      ],
+      "basis": "observed"
+    },
+    {
+      "target_id": "step-43700797e2f9d4ad",
+      "event_ids": [
+        "e5",
+        "e4",
+        "e6"
+      ],
+      "frame_ids": [
+        "frame-0002",
+        "frame-0003"
+      ],
+      "basis": "observed"
+    },
+    {
+      "target_id": "step-c996ee030afc07d5",
+      "event_ids": [
+        "e10",
+        "e8",
+        "e11",
+        "e9"
+      ],
+      "frame_ids": [
+        "frame-0004",
+        "frame-0005"
+      ],
+      "basis": "observed"
+    },
+    {
+      "target_id": "step-09c5ad78abd48464",
+      "event_ids": [
+        "e12",
+        "e11",
+        "e13"
+      ],
+      "frame_ids": [
+        "frame-0005",
+        "frame-0006"
+      ],
+      "basis": "observed"
+    },
+    {
+      "target_id": "step-ac2efa860155f34c",
+      "event_ids": [
+        "e16",
+        "e13",
+        "e17"
+      ],
+      "frame_ids": [
+        "frame-0006",
+        "frame-0007"
+      ],
+      "basis": "observed"
+    },
+    {
+      "target_id": "c1",
+      "event_ids": [
+        "e14",
+        "e1",
+        "e12",
+        "e13"
+      ],
+      "frame_ids": [
+        "frame-0001",
+        "frame-0005",
+        "frame-0006"
+      ],
+      "basis": "observed"
+    },
+    {
+      "target_id": "c2",
+      "event_ids": [
+        "e18",
+        "e6",
+        "e11",
+        "e13",
+        "e16",
+        "e17"
+      ],
+      "frame_ids": [
+        "frame-0003",
+        "frame-0005",
+        "frame-0006",
+        "frame-0007"
+      ],
+      "basis": "observed"
+    }
+  ],
+  "outcome": {
+    "status": "passed",
+    "check_ids": [
+      "c1",
+      "c2"
+    ]
+  },
+  "local_recording_available": true
+}

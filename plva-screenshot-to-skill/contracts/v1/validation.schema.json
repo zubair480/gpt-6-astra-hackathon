@@ -1,0 +1,185 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://plva.local/contracts/v1/validation.schema.json",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "enum": [
+        "1.0"
+      ]
+    },
+    "status": {
+      "enum": [
+        "candidate",
+        "reviewed",
+        "validated_on_fixture",
+        "invalid"
+      ]
+    },
+    "structure": {
+      "type": "object",
+      "properties": {
+        "passed": {
+          "type": "boolean"
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 4000
+          },
+          "maxItems": 256
+        }
+      },
+      "required": [
+        "passed",
+        "errors"
+      ],
+      "additionalProperties": false
+    },
+    "privacy": {
+      "type": "object",
+      "properties": {
+        "passed": {
+          "type": "boolean"
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 4000
+          },
+          "maxItems": 256
+        },
+        "image_redaction_verified": {
+          "const": false
+        }
+      },
+      "required": [
+        "passed",
+        "errors",
+        "image_redaction_verified"
+      ],
+      "additionalProperties": false
+    },
+    "outcome": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "enum": [
+            "unknown",
+            "passed",
+            "failed",
+            "cancelled"
+          ]
+        },
+        "supporting_check_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,95}$"
+          },
+          "maxItems": 256,
+          "uniqueItems": true
+        },
+        "source": {
+          "enum": [
+            "synthetic_fixture",
+            "trusted_recording",
+            "none"
+          ]
+        }
+      },
+      "required": [
+        "status",
+        "supporting_check_ids",
+        "source"
+      ],
+      "additionalProperties": false
+    },
+    "review": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "enum": [
+            "candidate",
+            "reviewed"
+          ]
+        },
+        "accepted_revision": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "status",
+        "accepted_revision"
+      ],
+      "additionalProperties": false
+    },
+    "reruns": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "enum": [
+              "mock_hook",
+              "live_runner"
+            ]
+          },
+          "status": {
+            "enum": [
+              "passed",
+              "failed",
+              "pending",
+              "invalidated"
+            ]
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "details": {
+            "type": "string",
+            "maxLength": 4000
+          }
+        },
+        "required": [
+          "kind",
+          "status",
+          "revision",
+          "details"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 256
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 4000
+      },
+      "maxItems": 256
+    }
+  },
+  "required": [
+    "schema_version",
+    "status",
+    "structure",
+    "privacy",
+    "outcome",
+    "review",
+    "reruns",
+    "warnings"
+  ],
+  "additionalProperties": false
+}

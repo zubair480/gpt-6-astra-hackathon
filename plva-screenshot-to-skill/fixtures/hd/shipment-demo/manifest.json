@@ -1,0 +1,63 @@
+{
+  "schema_version": "1.0",
+  "recording_id": "recording-demo-hd-003",
+  "task": "Prepare a replacement shipment draft from a support ticket.",
+  "capture_mode": "enriched",
+  "provenance": {
+    "producer": "plva-synthetic-fixture",
+    "data_class": "synthetic",
+    "privacy_policy_version": "synthetic-v1"
+  },
+  "environment": {
+    "kind": "browser",
+    "apps": [
+      "support",
+      "shipping"
+    ]
+  },
+  "events_file": "events.jsonl",
+  "frames": [
+    {
+      "frame_id": "frame-0001",
+      "path": "frames/frame-0001.png",
+      "sha256": "66698fc343e89f350592f487a0d376e23d30e85f1ba49a9fed0866b6e425a4b6"
+    },
+    {
+      "frame_id": "frame-0002",
+      "path": "frames/frame-0002.png",
+      "sha256": "4afbba6ade6b926d132ed9bb5e6dfad2f0172a4dc5f770b18d1370e4002fc0e6"
+    },
+    {
+      "frame_id": "frame-0003",
+      "path": "frames/frame-0003.png",
+      "sha256": "1f9395d375beecb124e119ffc7116e7c2c9d25280081596d08099f6bc7419e79"
+    },
+    {
+      "frame_id": "frame-0004",
+      "path": "frames/frame-0004.png",
+      "sha256": "f4e3767541f16405414530782dcefa159d836f44715781ed85ce084fe34476b1"
+    },
+    {
+      "frame_id": "frame-0005",
+      "path": "frames/frame-0005.png",
+      "sha256": "d0fe817468cfcafe86f9e7a832caa79791ca2069edea06282f3293cc82f1072f"
+    },
+    {
+      "frame_id": "frame-0006",
+      "path": "frames/frame-0006.png",
+      "sha256": "c999a1ffeaca8696dc3a9b403c0d1e7d6c70593f5c70de06523c36c52f1eb1fb"
+    },
+    {
+      "frame_id": "frame-0007",
+      "path": "frames/frame-0007.png",
+      "sha256": "c764932ba8838ef606601d5773e8cca65f37ba7d88b5f0b48f94803aeb6867c6"
+    }
+  ],
+  "outcome": {
+    "status": "passed",
+    "check_ids": [
+      "c1",
+      "c2"
+    ]
+  }
+}

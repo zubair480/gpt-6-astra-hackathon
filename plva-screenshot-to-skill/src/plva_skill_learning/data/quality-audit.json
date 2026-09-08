@@ -1,0 +1,155 @@
+{
+  "kind": "synthetic_learning_regression_audit",
+  "generated_at": "2026-09-08T22:51:27+00:00",
+  "baseline_commit": "af354a19178aa37bcd43275477fc63e8e9728a46",
+  "baseline": {
+    "totals": {
+      "passed": 4,
+      "failed": 7,
+      "error": 0,
+      "pending": 0
+    },
+    "cases": [
+      {
+        "case_id": "cancelled_source_cannot_prepare_as_ready",
+        "title": "Recognize a cancelled workflow",
+        "status": "failed"
+      },
+      {
+        "case_id": "conflicting_token_classes_require_review",
+        "title": "Do not guess conflicting field metadata",
+        "status": "failed"
+      },
+      {
+        "case_id": "corrected_typing_does_not_require_wrong_state",
+        "title": "Start from a valid state after correction",
+        "status": "failed"
+      },
+      {
+        "case_id": "corrected_typing_omits_superseded_wrong_write",
+        "title": "Learn the correction, omit the wrong entry",
+        "status": "failed"
+      },
+      {
+        "case_id": "failed_click_validation_message_is_not_a_precondition",
+        "title": "Do not turn an error message into a prerequisite",
+        "status": "passed"
+      },
+      {
+        "case_id": "failed_source_cannot_prepare_as_ready",
+        "title": "Reject an unsuccessful demonstration",
+        "status": "failed"
+      },
+      {
+        "case_id": "incidental_private_token_does_not_require_a_binding",
+        "title": "Ignore unrelated visible fields",
+        "status": "failed"
+      },
+      {
+        "case_id": "one_private_token_with_two_roles_requires_review",
+        "title": "Ask when one reference has two meanings",
+        "status": "passed"
+      },
+      {
+        "case_id": "one_public_value_with_two_roles_requires_review",
+        "title": "Ask when a public value has two roles",
+        "status": "passed"
+      },
+      {
+        "case_id": "recovered_historical_check_allows_corrected_workflow",
+        "title": "Keep failure evidence and allow verified recovery",
+        "status": "passed"
+      },
+      {
+        "case_id": "unrecovered_failed_check_blocks_preparation",
+        "title": "Stop at an unresolved failed checkpoint",
+        "status": "failed"
+      }
+    ]
+  },
+  "current": {
+    "totals": {
+      "passed": 11,
+      "failed": 0,
+      "error": 0,
+      "pending": 0
+    },
+    "cases": [
+      {
+        "case_id": "cancelled_source_cannot_prepare_as_ready",
+        "title": "Recognize a cancelled workflow",
+        "status": "passed"
+      },
+      {
+        "case_id": "conflicting_token_classes_require_review",
+        "title": "Do not guess conflicting field metadata",
+        "status": "passed"
+      },
+      {
+        "case_id": "corrected_typing_does_not_require_wrong_state",
+        "title": "Start from a valid state after correction",
+        "status": "passed"
+      },
+      {
+        "case_id": "corrected_typing_omits_superseded_wrong_write",
+        "title": "Learn the correction, omit the wrong entry",
+        "status": "passed"
+      },
+      {
+        "case_id": "failed_click_validation_message_is_not_a_precondition",
+        "title": "Do not turn an error message into a prerequisite",
+        "status": "passed"
+      },
+      {
+        "case_id": "failed_source_cannot_prepare_as_ready",
+        "title": "Reject an unsuccessful demonstration",
+        "status": "passed"
+      },
+      {
+        "case_id": "incidental_private_token_does_not_require_a_binding",
+        "title": "Ignore unrelated visible fields",
+        "status": "passed"
+      },
+      {
+        "case_id": "one_private_token_with_two_roles_requires_review",
+        "title": "Ask when one reference has two meanings",
+        "status": "passed"
+      },
+      {
+        "case_id": "one_public_value_with_two_roles_requires_review",
+        "title": "Ask when a public value has two roles",
+        "status": "passed"
+      },
+      {
+        "case_id": "recovered_historical_check_allows_corrected_workflow",
+        "title": "Keep failure evidence and allow verified recovery",
+        "status": "passed"
+      },
+      {
+        "case_id": "unrecovered_failed_check_blocks_preparation",
+        "title": "Stop at an unresolved failed checkpoint",
+        "status": "passed"
+      }
+    ]
+  },
+  "source_hashes": {
+    "__init__.py": "2bf5c9d78fdb927d490129e0a067bbf885b1f89735d74a3b84b12afcb12ffbd6",
+    "__main__.py": "935a1c1166b0c1ea35a82256345000bf2c73ded718d77773bc27a71ecce28f7d",
+    "api.py": "80b57b7f078079293b331760c2a9e209315228ab0375299e0e877e8cfe12bfbe",
+    "cli.py": "530a64c204e12fa12e5b86df53e5c2fbcc0265f95fa9458c576827124059c903",
+    "common.py": "709eb6a55cee6cbfa16bc140dc07c4659c981c2f140b39d10006877dbca5acb3",
+    "demo_viewer.py": "b8ba84bc04c146ede8e4601a31650da8566b232d34b120efa7052249634a907c",
+    "exporter.py": "dd6b0e2d2b83f8f2375e08fa9f06c8a9ab2ff8534cee45dff39a991af6f914de",
+    "ingest.py": "a3069ede96b8aa63509d83c8f60dc46dfb19599b6d67bc9345a87acc3cf240ce",
+    "model_adapter.py": "69173a7ecdba2c9bd5013836efb20f4e06d1ac54cf82f1069a9508c1ef8b14b2",
+    "rehearsal.py": "a423529263327fcd4373eff887a91238e1aff4a7a17ffd8cf14d876b303b9f39",
+    "review.py": "e00dc8e06b4083aa944f64778f80fce21f570edbeec4645fae93df2aa68fd497",
+    "runner_adapter.py": "c4190f8910bf9419ef77c16adb2411714382aad24c285787fb87e330cb63021b",
+    "safety.py": "2c8516f75a154c40bb6938d38d92996aede2532057cbb5b363d81361c9b705ab",
+    "synthesis.py": "371faf0bc71feaedc36c3b5afd897a12927fd808d0a67a985848dacd370d02fc",
+    "timeline.py": "c49eacaa9e95fa03a0e7828a0df77f214fc227016f3b8da2b87a12936468490b",
+    "validation.py": "7795172060d28b6f74182ccd0212f556752e7954f7ce08d51d6639b8fa249f4a"
+  },
+  "suite_hash": "529931c7088b8c4d77dd4bf48d1d3dcf489abed1f0d3447c374bbbcb9fcb54e5",
+  "scope": "The same synthetic recording variations run through draft, export, and prepare. No live model or application execution."
+}

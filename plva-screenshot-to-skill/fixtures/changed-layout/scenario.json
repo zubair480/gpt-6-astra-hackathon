@@ -1,0 +1,10 @@
+{
+  "kind": "synthetic_input",
+  "layout_changes": [
+    "Destination moved above order",
+    "Prepare draft renamed Save for review"
+  ],
+  "order_id": "DEMO-205",
+  "session_token": "ADDRESS_7_b812",
+  "live_runner_status": "pending"
+}

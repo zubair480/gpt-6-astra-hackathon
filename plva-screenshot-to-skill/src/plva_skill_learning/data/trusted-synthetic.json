@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0",
+  "approvals": [
+    {
+      "bundle_digest": "f30102df4e272d2f29e437e0b9670b32680aa63591365b674f35095ac0e74b6b",
+      "producer": "plva-synthetic-fixture",
+      "data_class": "synthetic",
+      "allow_cloud": false,
+      "role_hints_trusted": true
+    },
+    {
+      "bundle_digest": "ad90aba1f688f2b78dee946c117ab6e9b4c1c699502b0f85a88c8aaaa96a8296",
+      "producer": "plva-synthetic-fixture",
+      "data_class": "synthetic",
+      "allow_cloud": false,
+      "role_hints_trusted": true
+    }
+  ]
+}
