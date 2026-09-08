@@ -11,3 +11,5 @@ September 8, 2026.
 - UI screens and narration are explicitly a scripted walkthrough using synthetic records. No live agent calls or shipment operations occur in the player.
 
 After playback validation, minor content corrections changed the field count to three and shortened narration cues. Timeline durations and navigation behavior remain unchanged.
+
+Second-customer scenes now consistently use [NAME_2], [EMAIL_2], and [ADDRESS_2], making the new inputs visually distinct from the first customer's references. The corresponding SVGs, 4K PNGs, storyboard, and portable demo were regenerated. `npm run check` verifies the customer distinction, 60-second timeline, portable source, and exported assets.

@@ -28,6 +28,14 @@ Use a 16:9 screen or recording canvas. The scene artwork uses a 1920×1080 coord
 - `scenes.js`, `player.js`, `index.html` — editable presentation source.
 - `export.cjs` — rebuilds PNGs, SVGs, the contact sheet, and portable HTML. It uses Node and Sharp.
 
+## Website
+
+Run `npm run build` to assemble the public demo in `dist/`; no dependency installation is needed for this build. Run `npm run check` to verify the timeline, customer references, portable source, and exported assets. The website opens directly into the presentation and includes a separate 4K image-download page.
+
+Run `npm run deploy` with an authenticated Cloudflare account to publish the static demo as the `plva-demo` Worker. The command uses Wrangler 4.130.0. Deployment is a manual command; a GitHub push alone does not publish the site.
+
+For artwork changes, run `npm run export` with Sharp available, then build and check again. The first customer uses private references ending in `_1`; the second uses `_2` throughout its ticket, changed form, and results.
+
 ## What the demo represents
 
 This is a **scripted product walkthrough using synthetic data**. Typing, activity messages, checks, and results are presentation states. It makes no API calls, executes no browser tasks, and does not submit a shipment or expose actual private records. The footer keeps that distinction visible. Activity labels describe intended actions, not hidden model reasoning.

@@ -52,11 +52,12 @@
   }
   function workspace(i){
     const b=i>=8,protectedView=i>=3;
+    const privateToken=label=>`[${label}_${b?2:1}]`;
     const name=b?'Alex Rivera':'Mia Chen',email=b?'alex.rivera@example.test':'mia.chen@example.test',order=b?'ORD-3091':'ORD-2048',address=b?'46 Juniper Street, Austin':'184 Cedar Lane, Portland';
     let z=txt(997,128,i>=3?'PROTECTED AGENT WORKSPACE':'CONNECTED WORKSPACE',14,C.muted,600,'letter-spacing="1.6"');
     if([0,1,2,3,8].includes(i)){
       z+=browserHead(i)+txt(1030,311,'TICKET / '+order,15,C.muted,500,'letter-spacing="1"')+txt(1030,364,b?'Replacement requested':'Damaged item on arrival',36,C.ink,500)+pill(1680,291,166,'Replacement',C.green,'#edf7f3')+lines(1030,416,b?['The replacement form has moved.','Please arrange a replacement for this order.']:['My order arrived damaged. Could you arrange','a replacement to the same shipping address?'],22,'#5c6c70',400,34)+line(1030,491,1845,491)+txt(1030,534,'Customer details',21,C.ink,500)+pill(1576,508,270,protectedView?'3 fields protected locally':'Visible only on this device',C.green,protectedView?C.mint:C.light,protectedView?'shield':'lock');
-      z+=field(1030,574,391,'Full name',protectedView?'[NAME_1]':name,protectedView)+field(1453,574,391,'Email',protectedView?'[EMAIL_1]':email,protectedView)+field(1030,676,814,'Shipping address',protectedView?'[ADDRESS_1]':address,protectedView)+field(1030,777,391,'Order',order)+field(1453,777,391,'Item',b?'Summit Bottle':'Trail Mug');
+      z+=field(1030,574,391,'Full name',protectedView?privateToken('NAME'):name,protectedView)+field(1453,574,391,'Email',protectedView?privateToken('EMAIL'):email,protectedView)+field(1030,676,814,'Shipping address',protectedView?privateToken('ADDRESS'):address,protectedView)+field(1030,777,391,'Order',order)+field(1453,777,391,'Item',b?'Summit Bottle':'Trail Mug');
       z+=txt(1030,911,protectedView?'Contact details replaced before the model sees this view.':'Synthetic customer record · no real account connected',16,C.muted);
       if(i===3)z+=`<rect class="scan-line" x="1018" y="552" width="838" height="3" rx="1" fill="#33ad8f" opacity=".65"/>`;
       return z;
@@ -64,9 +65,9 @@
     if([4,9].includes(i)){
       z+=browserHead(i,'Replacement form')+txt(1030,320,b?'NEW LAYOUT / ORD-3091':'ORD-2048',15,C.muted,500,'letter-spacing="1"')+txt(1030,371,'Replacement draft',36,C.ink,500)+pill(1620,294,225,'Local value resolution',C.green,C.mint,'lock');
       if(b){
-        z+=field(1030,431,814,'Item','Summit Bottle',false,true)+field(1030,536,390,'Order reference',order,false,true)+field(1453,536,391,'Customer','[NAME_1]',true,true)+field(1030,641,814,'Destination','[ADDRESS_1]',true,true)+field(1030,746,600,'Contact email','[EMAIL_1]',true,true)+rect(1660,759,184,50,C.green,9)+txt(1690,792,'Save draft',20,'#fff',500);
+        z+=field(1030,431,814,'Item','Summit Bottle',false,true)+field(1030,536,390,'Order reference',order,false,true)+field(1453,536,391,'Customer',privateToken('NAME'),true,true)+field(1030,641,814,'Destination',privateToken('ADDRESS'),true,true)+field(1030,746,600,'Contact email',privateToken('EMAIL'),true,true)+rect(1660,759,184,50,C.green,9)+txt(1690,792,'Save draft',20,'#fff',500);
       }else{
-        z+=field(1030,431,390,'Order reference',order,false,true)+field(1453,431,391,'Item','Trail Mug',false,true)+field(1030,536,390,'Customer','[NAME_1]',true,true)+field(1453,536,391,'Email','[EMAIL_1]',true,true)+field(1030,641,814,'Shipping address','[ADDRESS_1]',true,true)+rect(1612,779,233,54,C.green,9)+txt(1643,814,'Prepare draft',20,'#fff',500);
+        z+=field(1030,431,390,'Order reference',order,false,true)+field(1453,431,391,'Item','Trail Mug',false,true)+field(1030,536,390,'Customer',privateToken('NAME'),true,true)+field(1453,536,391,'Email',privateToken('EMAIL'),true,true)+field(1030,641,814,'Shipping address',privateToken('ADDRESS'),true,true)+rect(1612,779,233,54,C.green,9)+txt(1643,814,'Prepare draft',20,'#fff',500);
       }
       z+=txt(1030,909,'Private values are inserted only into the intended local fields.',16,C.muted);
       z+=`<g class="demo-cursor" style="transform-origin:1746px 814px">${icon('arrow',1734,b?805:826,32,'#142a24')}</g>`;
@@ -74,7 +75,7 @@
     }
     if([5,10,11].includes(i)){
       z+=browserHead(i,'Replacement draft')+`<circle cx="1080" cy="360" r="42" fill="${C.mint}"/>`+icon('check',1055,335,50,C.green)+txt(1142,354,'Draft ready for review',33,C.ink,500)+txt(1142,393,b?'REP-3091 · Summit Bottle':'REP-2048 · Trail Mug',20,C.muted)+line(1030,439,1845,439)+txt(1030,490,'REPLACEMENT DETAILS',14,C.muted,600,'letter-spacing="1.5"');
-      [['Order',order],['Replacement item',b?'Summit Bottle':'Trail Mug'],['Customer','[NAME_1]'],['Destination','[ADDRESS_1]']].forEach((r,k)=>{z+=txt(1030,543+k*65,r[0],20,C.muted)+txt(1412,543+k*65,r[1],22,k>1?C.green:C.ink,500)+line(1030,565+k*65,1845,565+k*65);});
+      [['Order',order],['Replacement item',b?'Summit Bottle':'Trail Mug'],['Customer',privateToken('NAME')],['Destination',privateToken('ADDRESS')]].forEach((r,k)=>{z+=txt(1030,543+k*65,r[0],20,C.muted)+txt(1412,543+k*65,r[1],22,k>1?C.green:C.ink,500)+line(1030,565+k*65,1845,565+k*65);});
       z+=pill(1030,821,218,'Local draft only',C.green,C.mint,'check')+txt(1280,846,'Nothing purchased or sent',18,C.muted)+txt(1030,911,'Illustrated result for the scripted walkthrough',16,C.muted);
       return z;
     }
