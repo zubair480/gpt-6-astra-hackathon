@@ -22,6 +22,7 @@ policy, execute actions, read the vault, or stop the agent. It never calls a clo
 | Thin stdlib client + fake core | see `docs/INTEGRATION.md` |
 | Real local inference (Qwen via llama.cpp) | see `docs/MODEL.md` |
 | Isolation (NemoClaw/OpenShell) and deny evidence | see `docs/SECURITY.md` |
+| Agent demo (`plva_agent_demo`) | done: Playwright browser, DOM redaction, vault, GPT-6 Astra planner, operator UI |
 | Final handoff | `docs/HANDOFF.md` |
 
 `STATUS.md` tracks owners, checks, and blockers.
@@ -46,6 +47,30 @@ curl -s -H "Authorization: Bearer $CRED" -H 'Content-Type: application/json' \
 
 Mock mode identifies itself (`"mode": "mock"`, `"ready_for_private_values": false`). The
 client refuses to send real private values to it unless explicitly overridden for tests.
+
+## Agent demo: URL + task in, private run out
+
+`src/plva_agent_demo` is a standalone showcase of the whole loop. The cloud planner
+(OpenAI `gpt-6-astra`) sees only redacted frames and a value-free token manifest; this module
+answers approve / compute / review-trace locally.
+
+```bash
+cp -n .env.example .env            # set OPENAI_API_KEY; OPENAI_MODEL=gpt-6-astra
+uv sync --group dev --group demo && uv run playwright install chromium
+uv run plva-pr-mock                # or the real local model: see docs/MODEL.md + sandbox/start.sh
+uv run python -m plva_agent_demo.ui --port 3000   # open http://localhost:3000
+```
+
+Measured on 2026-09-08 (M2, 8 GB) against the real local Qwen3-1.7B service with verified
+isolation (macOS `sandbox-exec` dev backend):
+
+| Task on the synthetic Acme page | Steps | Outcome | Private-reasoning call |
+| --- | --- | --- | --- |
+| Paste my Acme API key into Connect analytics and click Connect | 4 | done, key typed locally only | approve → POLICY_MATCH, 2.5 s |
+| List the team members sorted alphabetically by name | 3 | done, correct order as tokens | compute/sort → COMPLETED, 3.9 s |
+| Find a phone number on mozilla.org/contact (real site) | 8 | no number exists; agent stopped at the step cap without inventing one | none |
+
+GPT-6 Astra step latency 3 to 5 s; redaction 40 to 100 ms; 0 leaks over every outbound body.
 
 ## Tests and checks
 

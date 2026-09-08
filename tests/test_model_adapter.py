@@ -91,7 +91,7 @@ def compute_request(**overrides: Any) -> ComputeRequest:
         "session_id": "synthetic-session",
         "request_id": "compute-001",
         "operation": "sort",
-        "instruction": "Alphabetical order by full name.",
+        "instruction": "Order by how formal each name sounds.",
         "items": [
             ComputeItem(token="NAME_1_a3f9", value="Charlie Example"),
             ComputeItem(token="NAME_2_a3f9", value="Alice Example"),
@@ -599,3 +599,36 @@ def test_service_responses_and_errors_never_carry_values() -> None:
     assert response.json()["reason_code"] == "MODEL_OUTPUT_INVALID"
     assert response.json()["tokens"] == []
     assert len(fake.calls) == 3
+
+
+def test_lexical_sort_fast_path_is_deterministic_and_model_free() -> None:
+    from plva_private_reasoning.contracts import ComputeRequest
+    from plva_private_reasoning.model.adapter import compute_backend, lexical_sort
+
+    class Explode:
+        def complete(self, *a: object, **k: object) -> str:
+            raise AssertionError("model must not be called for a plain alphabetical sort")
+
+    req = ComputeRequest.model_validate(
+        {
+            "schema_version": "1.0",
+            "session_id": "s",
+            "request_id": "r",
+            "operation": "sort",
+            "instruction": "Sort team members alphabetically by name, ascending (A-Z).",
+            "items": [
+                {"token": "NAME_2_b3ce", "value": "Charlie Example"},
+                {"token": "NAME_3_b3ce", "value": "Bob Example"},
+                {"token": "NAME_4_b3ce", "value": "Dana Example"},
+            ],
+            "select_count": None,
+        }
+    )
+    assert lexical_sort(req) == ["NAME_3_b3ce", "NAME_2_b3ce", "NAME_4_b3ce"]
+    assert list(compute_backend(Explode())(req)) == ["NAME_3_b3ce", "NAME_2_b3ce", "NAME_4_b3ce"]
+    reverse = req.model_copy(update={"instruction": "reverse alphabetical order"})
+    assert lexical_sort(reverse) == ["NAME_4_b3ce", "NAME_2_b3ce", "NAME_3_b3ce"]
+    fuzzy = req.model_copy(update={"instruction": "Order by how senior each person sounds."})
+    assert lexical_sort(fuzzy) is None
+    numeric = req.model_copy(update={"instruction": "sort by age, oldest first"})
+    assert lexical_sort(numeric) is None

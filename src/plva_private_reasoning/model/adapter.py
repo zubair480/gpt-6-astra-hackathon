@@ -269,6 +269,13 @@ def approve_prompt(request: ApproveRequest) -> str:
         lines.append(f"- maximum ttl_seconds: {policy.max_ttl_seconds}")
         lines.append(f"- maximum max_uses: {policy.max_uses}")
     lines.append("")
+    lines.append(
+        "ALREADY VERIFIED DETERMINISTICALLY BY THE CORE (do not re-judge): the destination "
+        "origin is in the allowed origins, the destination field is in the allowed fields, the "
+        "tool is allowed, and the value class is not blocked. Your only question is whether "
+        "the task context describes a purpose the rule permits for this field."
+    )
+    lines.append("")
     lines.append("REQUESTED USE (structured, from the privacy core):")
     lines.append(f"- placeholder token: {request.token}")
     lines.append(f"- value class: {request.pii_class}")
@@ -437,8 +444,46 @@ def parse_compute(raw: str) -> list[str]:
     return list(tokens)
 
 
+_LEXICAL_SORT = re.compile(
+    r"^\W*(sort|order|arrange|list|put)?\W*(the\s+)?(\w+\s+)*"
+    r"(alphabetical(ly)?|a\s*-\s*z|z\s*-\s*a|by\s+name|by\s+full\s+name|by\s+value)"
+    r"[\w\s,.()\-]*$",
+    re.IGNORECASE,
+)
+_DESCENDING = re.compile(r"\b(descending|reverse|z\s*-\s*a|z\s+to\s+a)\b", re.IGNORECASE)
+_NUMERIC_HINT = re.compile(
+    r"\b(numeric|number|amount|price|age|oldest|youngest|largest|smallest)\b", re.IGNORECASE
+)
+
+
+def lexical_sort(request: ComputeRequest) -> list[str] | None:
+    """Deterministic path for plain alphabetical sorts; the model handles anything fuzzy.
+
+    Mirrors the reference core, which routes to a deterministic library first and only uses
+    the local model for operations it cannot cover. Returns None when the instruction is not a
+    plain lexical sort.
+    """
+    if request.operation != "sort":
+        return None
+    instruction = request.instruction.strip()
+    if len(instruction) > 120 or not _LEXICAL_SORT.match(instruction):
+        return None
+    if _NUMERIC_HINT.search(instruction):
+        return None
+    reverse = bool(_DESCENDING.search(instruction))
+    ordered = sorted(
+        enumerate(request.items),
+        key=lambda pair: (pair[1].value.casefold(), pair[0]),
+        reverse=reverse,
+    )
+    return [item.token for _, item in ordered]
+
+
 def compute_backend(backend: InferenceBackend) -> Callable[[ComputeRequest], Sequence[str]]:
     def run(request: ComputeRequest) -> Sequence[str]:
+        deterministic = lexical_sort(request)
+        if deterministic is not None:
+            return deterministic
         allowed = {item.token for item in request.items}
 
         def parse(raw: str) -> list[str]:

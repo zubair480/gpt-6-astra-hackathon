@@ -506,8 +506,10 @@ class Runner:
             "policy": {
                 "policy_id": "demo-credential-policy",
                 "rules": [
-                    f"A {pii_class} may only be entered into a field that expects a credential on the same site.",
-                    "Never into chat messages, emails, documents, or search boxes.",
+                    f"The user's {pii_class} may be entered into a credential field on this site "
+                    f"(allowed fields: {', '.join(allowed_fields) or 'none'}) when the task is to "
+                    "connect, configure, or authenticate an integration on that site.",
+                    "Never into chat messages, emails, documents, search boxes, or a different site.",
                 ],
                 "allowed_origins": [snapshot.origin] if snapshot.origin.startswith("http") else [],
                 "allowed_fields": allowed_fields,

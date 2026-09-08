@@ -356,7 +356,7 @@ function initRunPanel() {
   $("btn-stop").onclick = stopRun;
   $("pol-reset").onclick = e => { e.preventDefault(); setPolicy(defaultPolicy); };
   $("reveal-local").addEventListener("change", () => renderFrames(view));
-  $("reveal-vault").addEventListener("change", () => { version = -1; poll(); });
+  $("reveal-vault").addEventListener("change", () => { version = -1; frameKey = ""; poll(); });
   $("follow").onclick = () => { selected = null; render(); };
   renderMaster();
 }
@@ -406,7 +406,7 @@ async function startRun() {
     const r = await fetch("/api/run", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body)});
     const d = await r.json().catch(() => ({}));
     if (!r.ok) { toast(d.error || ("HTTP " + r.status), true); $("btn-run").disabled = false; return; }
-    selected = null; lastCloudSrc = lastLocalSrc = ""; version = -1; poll();
+    selected = null; lastCloudSrc = lastLocalSrc = ""; version = -1; frameKey = ""; poll();
   } catch (e) { toast("could not reach the UI server", true); $("btn-run").disabled = false; }
 }
 async function stopRun() {
@@ -414,7 +414,7 @@ async function stopRun() {
     const r = await fetch("/api/stop", {method:"POST"});
     const d = await r.json().catch(() => ({}));
     if (!r.ok) toast(d.error || ("HTTP " + r.status), true); else toast("stop requested");
-    version = -1; poll();
+    version = -1; frameKey = ""; poll();
   } catch (e) { toast("could not reach the UI server", true); }
 }
 
@@ -422,7 +422,7 @@ async function stopRun() {
 async function poll() {
   const reveal = $("reveal-vault").checked ? 1 : 0;
   try {
-    const r = await fetch(`/api/state?since=${version}&reveal=${reveal}&images=1`, {cache:"no-store"});
+    const r = await fetch(`/api/state?since=${version}&reveal=${reveal}&images=0`, {cache:"no-store"});
     if (!r.ok) throw new Error("HTTP " + r.status);
     const d = await r.json();
     setConn(true);
@@ -467,7 +467,27 @@ function setPill(id, text, cls) { const el = $(id); el.textContent = text; el.cl
 function currentStep(d) {
   if (!d.steps.length) return null;
   if (selected != null) { const s = d.steps.find(x => x.step === selected); if (s) return s; }
+  // while following, stay on the last step that has a captured frame so the panel never blanks
+  for (let i = d.steps.length - 1; i >= 0; i--) { if (d.steps[i].frame_sha256) return d.steps[i]; }
   return d.steps[d.steps.length - 1];
+}
+
+let frameKey = "", frameReq = 0;
+async function loadFrames(s) {
+  const key = s ? `${s.step}:${s.frame_sha256}` : "";
+  if (key === frameKey) return;
+  frameKey = key;
+  const cimg = $("cloud-img"), limg = $("local-img");
+  if (!s || !s.frame_sha256) { return; }
+  const mine = ++frameReq;
+  try {
+    const r = await fetch(`/api/frame/${s.step}`, {cache:"no-store"});
+    if (!r.ok) return;
+    const f = await r.json();
+    if (mine !== frameReq) return; // a newer frame superseded this request
+    if (f.redacted_png) { cimg.src = "data:image/png;base64," + f.redacted_png; cimg.hidden = false; $("cloud-empty").hidden = true; }
+    if (f.raw_png) { limg.src = "data:image/png;base64," + f.raw_png; limg.hidden = false; $("local-empty").hidden = true; $("local-veil").classList.toggle("hide", $("reveal-local").checked); }
+  } catch (e) { /* keep the previous frame */ }
 }
 
 function renderFrames(d) {
@@ -480,16 +500,13 @@ function renderFrames(d) {
   ct.textContent = plvaOff ? "what the cloud model saw · UNREDACTED" : "what the cloud model saw";
   ct.className = "tag " + (plvaOff ? "bad" : "ok");
 
-  const cimg = $("cloud-img"), limg = $("local-img");
-  const csrc = s && s.redacted_png ? "data:image/png;base64," + s.redacted_png : "";
-  const lsrc = s && s.raw_png ? "data:image/png;base64," + s.raw_png : "";
-  if (csrc !== lastCloudSrc) { lastCloudSrc = csrc; if (csrc) cimg.src = csrc; else cimg.removeAttribute("src"); }
-  if (lsrc !== lastLocalSrc) { lastLocalSrc = lsrc; if (lsrc) limg.src = lsrc; else limg.removeAttribute("src"); }
-  cimg.hidden = !csrc; $("cloud-empty").hidden = !!csrc;
-  limg.hidden = !lsrc; $("local-empty").hidden = !!lsrc;
+  const limg = $("local-img");
+  const hasFrame = !!(s && s.frame_sha256);
+  if (!hasFrame && !frameKey) { $("cloud-img").hidden = true; $("cloud-empty").hidden = false; limg.hidden = true; $("local-empty").hidden = false; }
+  loadFrames(s);
   const revealLocal = $("reveal-local").checked;
   limg.classList.toggle("blur", !revealLocal);
-  $("local-veil").classList.toggle("hide", revealLocal || !lsrc);
+  $("local-veil").classList.toggle("hide", revealLocal || limg.hidden);
 
   const m = $("cloud-metrics"); m.innerHTML = "";
   if (s) {

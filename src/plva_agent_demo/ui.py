@@ -130,6 +130,23 @@ def create_ui_app(state: RunState) -> FastAPI:
     def index() -> HTMLResponse:
         return HTMLResponse(HTML_PATH.read_text(encoding="utf-8"), headers=NO_STORE)
 
+    @app.get("/api/frame/{step}")
+    def api_frame(step: int) -> JSONResponse:
+        """Both frames for one step. Fetched by the page only when the step changes."""
+        view = state.public_view(reveal_values=False, include_images=True)
+        for record in view["steps"]:
+            if record["step"] == step:
+                body = {
+                    "step": step,
+                    "frame_sha256": record["frame_sha256"],
+                    "redacted_png": record["redacted_png"],
+                    "raw_png": record["raw_png"],
+                }
+                return JSONResponse(body, headers={"Cache-Control": "no-store"})
+        return JSONResponse(
+            {"error": "no such step"}, status_code=404, headers={"Cache-Control": "no-store"}
+        )
+
     @app.get("/api/state")
     def api_state(since: int = -1, reveal: int = 0, images: int = 1) -> JSONResponse:
         if since == state.version:
