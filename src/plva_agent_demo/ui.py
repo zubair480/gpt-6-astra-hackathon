@@ -10,16 +10,20 @@ Run:  uv run python -m plva_agent_demo.ui --port 18600   then open http://127.0.
 from __future__ import annotations
 
 import argparse
+import hmac
 import importlib
 import ipaddress
+import os
+import secrets
 import sys
 import threading
+from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 
 from .state import RunConfig, RunState
 from .types import DEFAULT_POLICY
@@ -35,6 +39,63 @@ LEVELS = frozenset({"hide_use", "approval", "blocked"})
 MAX_TASK_CHARS = 4000
 MAX_STEPS_LIMIT = 100
 NO_STORE = {"Cache-Control": "no-store"}
+ACCESS_COOKIE = "plva_access"
+LOGIN_HTML = (
+    "<!doctype html><meta charset=utf-8><title>PLVA agent demo</title><style>body{margin:0;"
+    "min-height:100vh;display:grid;place-items:center;background:#0a0c11;color:#e6e8ee;"
+    "font:15px -apple-system,Segoe UI,sans-serif}form{background:#11141b;"
+    "border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:28px 32px;width:320px}"
+    "h1{font-size:16px;margin:0 0 6px}p{color:#8b93a7;font-size:13px;margin:0 0 16px}"
+    "input{width:100%;box-sizing:border-box;padding:10px;border-radius:8px;"
+    "border:1px solidrgba(255,255,255,.1);background:#0a0c11;color:#e6e8ee;font-size:15px}"
+    "button{margin-top:12px;width:100%;padding:10px;border:0;border-radius:8px;"
+    "background:#9d8cff;color:#0a0c11;font-weight:600;font-size:14px}.err{color:#ff6b6b}"
+    "</style><form method=post action=/login><h1>PLVA agent demo</h1><p>"
+    "Enter the access code shared with you.</p><!--err-->"
+    '<input name=code type=password autofocusplaceholder="access code"><button>Enter</button>'
+    "</form>"
+)
+
+
+def runtime_dir() -> Path:
+    return Path(os.environ.get("PLVA_PR_RUNTIME_DIR", ".plva-pr"))
+
+
+def _write_secret(path: Path, value: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as handle:
+        handle.write(value)
+
+
+def _secret_file(name: str, generate: Callable[[], str]) -> str:
+    path = runtime_dir() / name
+    if path.exists():
+        return path.read_text(encoding="utf-8").strip()
+    value = generate()
+    _write_secret(path, value)
+    return value
+
+
+def public_mode() -> bool:
+    return os.environ.get("PLVA_UI_PUBLIC", "") == "1"
+
+
+def access_code() -> str:
+    """Shared code for the public link. PLVA_UI_ACCESS_CODE overrides the generated one."""
+    return os.environ.get("PLVA_UI_ACCESS_CODE", "").strip() or _secret_file(
+        "ui-access-code", lambda: secrets.token_urlsafe(9)
+    )
+
+
+def operator_token() -> str:
+    """Gates value exports. Exists only in the runtime dir on this machine."""
+    return _secret_file("ui-operator-token", lambda: secrets.token_urlsafe(32))
+
+
+def operator_ok(request: Request) -> bool:
+    presented = request.headers.get("x-plva-operator", "")
+    return bool(presented) and hmac.compare_digest(presented, operator_token())
 
 
 class RequestError(ValueError):
@@ -124,6 +185,62 @@ def build_run_config(body: Any) -> RunConfig:
 
 def create_ui_app(state: RunState) -> FastAPI:
     app = FastAPI(title="PLVA agent demo UI", docs_url=None, redoc_url=None, openapi_url=None)
+    code = access_code() if public_mode() else ""
+
+    @app.middleware("http")
+    async def _gate(
+        request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
+        """Public mode: every route except /login and /health needs the access cookie."""
+        if code:
+            path = request.url.path
+            cookie_ok = hmac.compare_digest(request.cookies.get(ACCESS_COOKIE, ""), code)
+            if path not in ("/login", "/health") and not cookie_ok:
+                if path.startswith("/api/"):
+                    return JSONResponse(
+                        {"error": "access code required"}, status_code=401, headers=NO_STORE
+                    )
+                return RedirectResponse("/login", status_code=302)
+        response = await call_next(request)
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
+    @app.get("/health")
+    def health() -> dict[str, str]:
+        return {"status": "alive"}
+
+    @app.get("/login")
+    def login_form() -> HTMLResponse:
+        return HTMLResponse(LOGIN_HTML, headers=NO_STORE)
+
+    @app.post("/login")
+    async def login_submit(request: Request) -> Response:
+        raw = (await request.body())[:4096].decode("utf-8", "replace")
+        presented = parse_qs(raw).get("code", [""])[0]
+        if not code or not hmac.compare_digest(presented, code):
+            page = LOGIN_HTML.replace("<!--err-->", "<p class=err>wrong code</p>")
+            return HTMLResponse(page, status_code=401, headers=NO_STORE)
+        response: Response = RedirectResponse("/", status_code=303)
+        response.set_cookie(
+            ACCESS_COOKIE,
+            code,
+            httponly=True,
+            samesite="lax",
+            secure=request.url.scheme == "https",
+            max_age=86400,
+        )
+        return response
+
+    @app.get("/api/redactions")
+    def api_redactions(request: Request, values: int = 0, images: int = 0) -> JSONResponse:
+        """Redaction feed for the current run: value-free unless ``values=1`` + operator token."""
+        if values == 1 and not operator_ok(request):
+            return JSONResponse(
+                {"error": "operator token required for values"}, status_code=403, headers=NO_STORE
+            )
+        records = state.redaction_records(include_values=values == 1, include_images=images == 1)
+        return JSONResponse({"count": len(records), "records": records}, headers=NO_STORE)
+
     start_lock = threading.Lock()
 
     @app.get("/", response_class=HTMLResponse)

@@ -160,6 +160,51 @@ class RunState:
         with self._lock:
             return [event for record in self.steps for event in record.events]
 
+    def redaction_records(
+        self, *, include_values: bool = False, include_images: bool = False
+    ) -> list[dict[str, Any]]:
+        """One record per captured step for the redaction feed. Value-free unless asked."""
+        with self._lock:
+            index: dict[str, dict[str, Any]] = {
+                token: {
+                    "class": entry["class"],
+                    "level": entry["level"],
+                    "stored": entry["value"] is not None,
+                }
+                for token, entry in self.vault.items()
+            }
+            if include_values:
+                for token, entry in self.vault.items():
+                    index[token]["value"] = entry["value"]
+            records: list[dict[str, Any]] = []
+            for record in self.steps:
+                if not record.frame_sha256:
+                    continue
+                tokens = [m["token"] for m in record.manifest]
+                item: dict[str, Any] = {
+                    "run_started_at": self.started_at,
+                    "step": record.step,
+                    "url": record.url,
+                    "frame_sha256": record.frame_sha256,
+                    "mask_count": record.mask_count,
+                    "outbound_bytes": record.outbound_bytes,
+                    "manifest": list(record.manifest),
+                    "tokens": {t: index[t] for t in tokens if t in index},
+                    "events": [asdict(e) for e in record.events],
+                    "action": dict(record.action),
+                    "approvals": [asdict(a) for a in self.approvals if a.step == record.step],
+                    "computes": [c for c in self.computes if c.get("step") == record.step],
+                    "includes_values": include_values,
+                }
+                if include_images:
+                    item["redacted_png"] = (
+                        base64.b64encode(record.redacted_png).decode()
+                        if record.redacted_png
+                        else ""
+                    )
+                records.append(item)
+            return records
+
     # -- reader side ---------------------------------------------------------
     def public_view(
         self, *, reveal_values: bool = False, include_images: bool = True

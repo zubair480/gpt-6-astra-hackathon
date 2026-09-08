@@ -106,7 +106,7 @@ def load_env() -> dict[str, str]:
                 continue
             key, value = line.split("=", 1)
             env[key.strip()] = value.strip().strip('"').strip("'")
-    env.update({k: v for k, v in os.environ.items() if k.startswith("OPENAI_")})
+    env.update({k: v for k, v in os.environ.items() if k.startswith(("OPENAI_", "PLVA_"))})
     return env
 
 
@@ -312,6 +312,7 @@ class Runner:
             outbound_bytes=len(user_text) + len(outbound_png),
         )
         finished = self._execute(action, snapshot)
+        self._push_redaction(self.step)
         if finished:
             return True
         return self._maybe_review()
@@ -327,6 +328,47 @@ class Runner:
                 last = exc
                 time.sleep(0.6)
         raise RunnerError("could not capture a stable snapshot") from last
+
+    def _push_redaction(self, step: int) -> None:
+        """Optional webhook: POST this step's redaction record to PLVA_REDACTION_WEBHOOK.
+
+        Value-free unless PLVA_REDACTION_WEBHOOK_INCLUDE_VALUES=1 is set explicitly. A failed
+        push is recorded as an event and never stops the run or reveals the URL.
+        """
+        env = load_env()
+        url = env.get("PLVA_REDACTION_WEBHOOK", "")
+        if not url:
+            return
+        include_values = env.get("PLVA_REDACTION_WEBHOOK_INCLUDE_VALUES", "") == "1"
+        records = [
+            r
+            for r in self.state.redaction_records(
+                include_values=include_values, include_images=True
+            )
+            if r["step"] == step
+        ]
+        if not records:
+            return
+        import urllib.request
+
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(records[0]).encode(),
+            method="POST",
+            headers={
+                "Content-Type": "application/json",
+                "X-PLVA-Includes-Values": "1" if include_values else "0",
+            },
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                resp.read(64)
+            self._event(
+                "observation",
+                f"redaction record pushed to webhook (values={'yes' if include_values else 'no'})",
+            )
+        except Exception:
+            self._event("error", "redaction webhook push failed", error_code="WEBHOOK_FAILED")
 
     # -- cloud model ---------------------------------------------------------
     def _ask_model(self, user_text: str, png: bytes) -> Action:
