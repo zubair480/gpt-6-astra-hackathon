@@ -139,6 +139,7 @@ code::before{
 .strip{max-width:1400px;margin:0 auto;padding:12px 32px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .strip .grp{font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);margin:0 2px 0 4px;white-space:nowrap}
 .strip .view{display:flex;gap:8px;margin-left:auto}
+@media (max-width:1100px){.strip .grp{display:none}.strip{gap:8px}}
 
 .banner{
   display:none;align-items:center;justify-content:center;gap:12px;padding:10px 32px;
@@ -511,7 +512,7 @@ td.toks code{margin:1px 4px 1px 0}
         <figure class="device">
           <figcaption class="device-bar">
             <span class="tag bad" id="local-tag">never leaves this machine</span>
-            <label class="toggle" style="margin-left:auto"><input type="checkbox" id="reveal-local"> reveal local view</label>
+            <label class="toggle" style="margin-left:auto"><input type="checkbox" id="reveal-local" checked> reveal local view</label>
           </figcaption>
           <div class="panel">
             <div class="tb"><i></i><i></i><i></i>
@@ -615,21 +616,22 @@ function toast(msg, bad) {
 
 /* ---------------- view preferences (UI only, remembered per browser) ---------------- */
 const PREF = {details:"plva.ui.details", ledgers:"plva.ui.ledgers", policy:"plva.ui.policy"};
-function prefGet(k) { try { return localStorage.getItem(k) === "1"; } catch (e) { return false; } }
-function prefSet(k, v) { try { localStorage.setItem(k, v ? "1" : "0"); } catch (e) { /* private mode */ } }
+const prefs = {details:false, ledgers:false, policy:false};   // in-memory truth; localStorage is best effort
+function prefLoad() { for (const k in prefs) { try { prefs[k] = localStorage.getItem(PREF[k]) === "1"; } catch (e) { /* storage unavailable */ } } }
+function prefSet(k, v) { prefs[k] = !!v; try { localStorage.setItem(PREF[k], v ? "1" : "0"); } catch (e) { /* storage unavailable */ } }
 function applyView() {
-  const details = prefGet(PREF.details), ledgers = prefGet(PREF.ledgers);
-  document.body.classList.toggle("details-on", details);
-  $("tg-details").setAttribute("aria-pressed", String(details));
-  $("ledgers").hidden = !ledgers;
-  $("tg-ledgers").setAttribute("aria-pressed", String(ledgers));
-  $("policy").open = prefGet(PREF.policy);
+  document.body.classList.toggle("details-on", prefs.details);
+  $("tg-details").setAttribute("aria-pressed", String(prefs.details));
+  $("ledgers").hidden = !prefs.ledgers;
+  $("tg-ledgers").setAttribute("aria-pressed", String(prefs.ledgers));
+  if ($("policy").open !== prefs.policy) $("policy").open = prefs.policy;
 }
 function initView() {
+  prefLoad();
   applyView();
-  $("tg-details").onclick = () => { prefSet(PREF.details, !prefGet(PREF.details)); applyView(); };
-  $("tg-ledgers").onclick = () => { prefSet(PREF.ledgers, !prefGet(PREF.ledgers)); applyView(); };
-  $("policy").addEventListener("toggle", () => prefSet(PREF.policy, $("policy").open));
+  $("tg-details").onclick = () => { prefSet("details", !prefs.details); applyView(); };
+  $("tg-ledgers").onclick = () => { prefSet("ledgers", !prefs.ledgers); applyView(); };
+  $("policy").addEventListener("toggle", () => prefSet("policy", $("policy").open));
 }
 
 /* ---------------- run panel ---------------- */
