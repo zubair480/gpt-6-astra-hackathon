@@ -127,11 +127,19 @@ SIGNATURE_SANDBOX_EXEC: Final = Signature(
     loopback_refused_is_denial=False,
     tested_here=True,
 )
-# OpenShell (Linux, Docker driver): the sandbox runs in a private network namespace whose
-# only route is the gateway's deny-by-default L7 proxy. Documented behaviour: HTTPS CONNECT
-# through the injected proxy gets HTTP 403; direct connects have no route or are refused;
-# DNS resolution is blocked. UNTESTED on this machine; signature comes from the NVIDIA docs
-# and the reference project's runbook. Silent drops (timeout) stay inconclusive.
+# OpenShell (Docker driver): the sandbox process runs in a private network namespace
+# (10.200.0.2/24) whose default route is the supervisor's deny-by-default proxy at
+# 10.200.0.1:3128, injected via HTTP(S)_PROXY/ALL_PROXY; nftables REJECT rules fence every
+# direct path. TESTED 2026-09-08 with openshell 0.0.116 on Colima/Docker (aarch64), policy
+# `network_policies: {}`; observed per probe (all within 200 ms):
+#   https_well_known            CONNECT via injected proxy -> "Tunnel connection failed: 403"
+#   tcp_direct_ip               connect() -> ECONNREFUSED (nft reject with tcp-reset)
+#   dns_resolve                 getaddrinfo -> EAI_AGAIN in ~1 ms (resolver 127.0.0.11 has no
+#                               listener inside the namespace)
+#   udp_dns_query               sendto() -> EPERM (nft reject on UDP)
+#   proxy_env_bogus_loopback    ECONNREFUSED (namespaced loopback, nothing on :1)
+#   proxy_env_cleared_direct_ip ECONNREFUSED
+# Silent drops (timeout) stay inconclusive.
 SIGNATURE_OPENSHELL: Final = Signature(
     name="openshell",
     connect_denied=frozenset({"ECONNREFUSED", "ENETUNREACH", "EHOSTUNREACH", "EPERM", "EACCES"}),
@@ -140,7 +148,7 @@ SIGNATURE_OPENSHELL: Final = Signature(
     dns_fast_ms=1500,
     tunnel_403_is_denial=True,
     loopback_refused_is_denial=True,
-    tested_here=False,
+    tested_here=True,
 )
 # Negative control: no enforcement; nothing is a denial signature.
 SIGNATURE_NONE: Final = Signature(

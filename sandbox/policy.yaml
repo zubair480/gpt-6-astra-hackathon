@@ -1,67 +1,57 @@
 # PLVA private reasoning: OpenShell sandbox policy (zero egress).
 #
-# Target backend: NVIDIA OpenShell, Docker driver, Linux x86_64 host (preferred by the
-# spec). Schema: https://docs.nvidia.com/openshell/reference/policy-schema
-# STATUS ON THE AUTHOR'S MACHINE: UNTESTED. `openshell` and a container runtime are not
-# installed on the macOS host used to write this file, so this policy has been checked
-# against the published schema only, not applied to a live sandbox. Until it has been
-# applied and sandbox/deny_check.py has run inside the resulting sandbox with exit 0,
-# treat every line below as a claim, not evidence. See docs/SECURITY.md.
+# STATUS: TESTED 2026-09-08 with openshell 0.0.116 / openshell-gateway 0.0.116 (Homebrew),
+# Docker driver on Colima (Docker 29.x, vz, aarch64), macOS 26.4 Apple Silicon. The schema
+# below is what `openshell sandbox get <name> --policy-only` prints for the built-in
+# restrictive default, plus the documented `process` and `network_policies` sections; every
+# key was accepted by `openshell sandbox create --policy` on that version. Applied by
+# sandbox/start.sh --backend openshell; sandbox/deny_check.py then runs inside the resulting
+# sandbox and its exit status is the evidence (see docs/SECURITY.md), not this file.
 #
-# Inference and the cleartext-handling service both run INSIDE this sandbox. The only
-# way in is the gateway's explicit loopback port forward created by sandbox/start.sh:
-#   openshell forward service <sandbox> --target-port 18555 --local 127.0.0.1:18555
-# That forward is not part of the policy document; it is gateway state, and it is
-# inbound only (the sandbox cannot initiate connections back through it).
+# Inference and the cleartext-handling service both run INSIDE this sandbox. The only way in
+# is the gateway's explicit loopback port forward created by sandbox/start.sh:
+#   openshell forward service plva-pr --target-port 18555 --local 127.0.0.1:18575
+# That forward is gateway state, not policy, and it is inbound only.
+#
+# The model is NOT baked into the image. start.sh bind-mounts models/ read-only at /models via
+# the docker driver config ({"docker":{"mounts":[{"type":"bind",...,"read_only":true}]}}).
 
 # Policy schema version. Must be 1.
 version: 1
 
-# --- filesystem (static: fixed at sandbox creation, cannot be changed at runtime) ------
+# --- filesystem (static: fixed at sandbox creation) --------------------------------------
 filesystem_policy:
-  # Do NOT mount the operator's working directory into the sandbox. Nothing in the repo
-  # checkout is needed at runtime; the image carries the service and the runtime.
+  # Do NOT mount the operator's working directory into the sandbox.
   include_workdir: false
-  # Paths that are readable but never writable. Everything not listed is inaccessible.
+  # Readable, never writable. Everything not listed is inaccessible (Landlock).
   read_only:
-    - /usr          # Python interpreter, llama.cpp runtime, shared libraries
-    - /lib          # loader and libc
-    - /lib64        # loader on x86_64 images (absent on some images; landlock best_effort below tolerates that)
+    - /usr          # Python interpreter, shared libraries (Debian merged-usr: /bin,/lib -> /usr)
+    - /lib          # loader symlink
     - /bin          # sh, needed by `openshell sandbox exec ... -- sh -c`
-    - /etc          # resolv.conf/passwd/ssl certs; read-only so the runtime cannot alter them
+    - /etc          # passwd/ssl certs; read-only so the runtime cannot alter them
     - /proc         # process introspection used by the runtime; read-only
     - /dev/urandom  # entropy for the per-launch bearer credential
-    - /app          # the installed plva_private_reasoning package and its venv (baked into the image)
-    - /models       # READ-ONLY model mount: GGUF weights baked into the image at provisioning time
-  # The only writable locations. Both are tmpfs/ephemeral in the container: nothing the
-  # service writes survives `openshell sandbox delete`. No request bodies, prompts, or
-  # completions are ever written anyway (see docs/SECURITY.md, data handling).
+    - /app          # the installed plva_private_reasoning package and its venv (in the image)
+    - /models       # READ-ONLY bind mount of the host models/ directory (GGUF weights)
+  # The only writable locations. Ephemeral: nothing survives `openshell sandbox delete`.
   read_write:
-    - /tmp          # runtime dir: bearer credential file (0600) and deny-check evidence
+    - /tmp          # runtime dir /tmp/plva-pr: bearer credential (0600) and deny-check evidence
     - /dev/null
 
-# --- landlock (static) -------------------------------------------------------------------
+# --- landlock (static) --------------------------------------------------------------------
 landlock:
-  # best_effort: warn and continue if a listed path is missing in the image (e.g. /lib64
-  # on an arm64 image). Switch to hard_requirement once the image is fixed so a missing
-  # path aborts startup instead of silently widening access.
+  # best_effort: warn and continue if a listed path is missing in the image.
   compatibility: best_effort
 
 # --- process identity (static) ------------------------------------------------------------
 process:
-  # Never root. `sandbox` is OpenShell's unprivileged built-in user.
+  # Never root. The image creates `sandbox` (uid 1000); OpenShell also requires an OCI USER.
   run_as_user: sandbox
   run_as_group: sandbox
 
-# --- network (dynamic: hot-reloadable with `openshell policy set`) -------------------------
-# OpenShell's gateway proxy is deny-by-default: a request is allowed only if it matches a
-# listed endpoint for a listed binary. An EMPTY map therefore denies every outbound
-# connection from every binary: HTTPS (CONNECT answered 403), direct-IP TCP, UDP, and DNS
-# resolution. No proxy environment is granted anything because there is no allowed
-# endpoint for any proxy to reach. This is the whole point of the policy; do not add
-# entries. The service needs no outbound access at all: weights, packages, and tokenizer
-# files are provisioned into the image before this policy is applied.
+# --- network (dynamic: hot-reloadable with `openshell policy set`) --------------------------
+# OpenShell's sandbox network runtime (capabilities: policy-dns-transparent-tcp) is
+# deny-by-default: a connection is allowed only if it matches a listed endpoint for a listed
+# binary. An EMPTY map denies every outbound connection from every binary. Do not add entries:
+# weights, packages, and tokenizer files are provisioned into the image / mount beforehand.
 network_policies: {}
-
-# No network middlewares: there is no allowed traffic for them to inspect.
-# (Omitted on purpose; an empty map would be equivalent.)

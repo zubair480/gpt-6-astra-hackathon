@@ -1,0 +1,8 @@
+# Applies when building with `-f sandbox/Dockerfile` (BuildKit picks <Dockerfile>.dockerignore).
+# Keep the 1.8 GB model, the venv, and unrelated trees out of the build context.
+*
+!pyproject.toml
+!README.md
+!LICENSE
+!src/
+src/**/__pycache__

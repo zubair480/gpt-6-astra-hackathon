@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 # PLVA private reasoning: stop the isolated service and INVALIDATE its isolation evidence.
 #
-#   sandbox/stop.sh [--backend openshell|macos-dev] [--runtime-dir DIR] [--delete]
+#   sandbox/stop.sh [--backend openshell|macos-dev] [--runtime-dir DIR] [--keep-sandbox]
 #
 # Removing isolation-evidence.json here is deliberate: evidence is bound to the instance_id
 # of the process being stopped and must never be reused by the next launch (acceptance
-# test 9). The openshell path is UNTESTED (see start.sh header).
+# test 9). openshell backend (TESTED with openshell 0.0.116, Docker driver on Colima): stops
+# the host-side forward and DELETES the sandbox (start.sh creates a fresh one every launch;
+# the service is its main process, so stopping it means deleting it). --keep-sandbox only
+# stops the forward and scrubs the in-sandbox credential/evidence. The gateway itself is left
+# running; stop it with sandbox/openshell-gateway.sh stop.
 set -uo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -13,7 +17,7 @@ ROOT="$(cd "$HERE/.." && pwd)"
 BACKEND="${PLVA_PR_SANDBOX_BACKEND:-}"
 RUNTIME_DIR="${PLVA_PR_RUNTIME_DIR:-$ROOT/.plva-pr}"
 SANDBOX_NAME="${PLVA_PR_SANDBOX_NAME:-plva-pr}"
-DELETE=0
+DELETE=1
 
 say() { printf '\033[1m[plva-pr sandbox]\033[0m %s\n' "$*"; }
 
@@ -22,6 +26,7 @@ while [ $# -gt 0 ]; do
     --backend) BACKEND="$2"; shift 2 ;;
     --runtime-dir) RUNTIME_DIR="$2"; shift 2 ;;
     --delete) DELETE=1; shift ;;
+    --keep-sandbox) DELETE=0; shift ;;
     -h|--help) sed -n '2,10p' "$0"; exit 0 ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
@@ -48,16 +53,18 @@ case "$BACKEND" in
     ;;
   openshell)
     stop_pid_file "$RUNTIME_DIR/forward.pid"
-    if command -v openshell >/dev/null 2>&1; then
-      openshell sandbox exec -n "$SANDBOX_NAME" --timeout 15 -- sh -c \
-        'pkill -f plva-pr-local 2>/dev/null; pkill -x llama-server 2>/dev/null; rm -f /tmp/plva-pr/credential; true' \
-        >/dev/null 2>&1 || true
+    if command -v openshell >/dev/null 2>&1 && openshell sandbox list --names 2>/dev/null | grep -qx "$SANDBOX_NAME"; then
       if [ "$DELETE" = 1 ]; then
         openshell sandbox delete "$SANDBOX_NAME" >/dev/null 2>&1 || true
-        say "sandbox $SANDBOX_NAME deleted"
+        say "sandbox $SANDBOX_NAME deleted (service, credential and in-sandbox evidence gone with it)"
+      else
+        openshell sandbox exec -n "$SANDBOX_NAME" --no-tty --timeout 15 -- \
+          rm -f /tmp/plva-pr/credential /tmp/plva-pr/isolation-evidence.json /tmp/plva-pr/deny-check.json \
+          >/dev/null 2>&1 || true
+        say "sandbox $SANDBOX_NAME kept; in-sandbox credential and evidence removed (service still running, unready)"
       fi
     fi
-    say "forward + service stopped (openshell)"
+    say "forward stopped (openshell)"
     ;;
   *) echo "unknown backend: $BACKEND" >&2; exit 2 ;;
 esac
