@@ -5,7 +5,7 @@
   "description": "PLVA interactive 60-second demo and 4K screens",
   "scripts": {
     "build": "node build.cjs",
-    "check": "node verify.cjs",
+    "check": "node verify.cjs && node player.test.cjs",
     "deploy": "npm run build && npx --yes wrangler@4.130.0 deploy",
     "export": "node export.cjs"
   }

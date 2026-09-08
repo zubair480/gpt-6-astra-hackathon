@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>PLVA · One-minute product demo</title>
-<meta name="description" content="A one-minute PLVA walkthrough: private computer use, protected customer details, and reusable workflows. Advance with Next or play the full sequence.">
+<meta name="description" content="A one-minute PLVA walkthrough: private computer use, protected customer details, and reusable workflows. Present with four clicks or play the full sequence.">
 <meta name="theme-color" content="#f3f6f6">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <style>
@@ -16,8 +16,8 @@
   <nav class="controls" aria-label="Demo controls">
     <div class="chapter"><div class="eyebrow">PLVA / PRESENTER CONTROL</div><div id="chapter" class="chapter-title"></div></div>
     <span id="time" class="time">00:00 / 01:00</span><span class="divider"></span>
-    <button id="back" class="btn" aria-label="Previous scene">←</button>
-    <button id="next" class="btn primary">Next →</button>
+    <button id="back" class="btn" aria-label="Previous stopping point">←</button>
+    <button id="next" class="btn primary">Enter prompt →</button>
     <button id="play" class="btn">Play 60s</button>
     <button id="reset" class="btn optional" title="Restart · R">↺</button>
     <button id="notes-button" class="btn optional">Notes</button>
@@ -27,6 +27,6 @@
 </main>
 <aside id="notes" class="notes"><small>NARRATION / <span id="note-time"></span></small><div id="note-text"></div></aside>
 <div id="progress" class="progress"></div>
-<div id="help" class="help" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts"><div class="help-card"><h2>Ready for the room.</h2><p><kbd>→</kbd> or <kbd>Space</kbd> Next scene<br><kbd>←</kbd> Previous scene<br><kbd>P</kbd> Play / pause the 60-second sequence<br><kbd>R</kbd> Restart<br><kbd>N</kbd> Narration notes<br><kbd>F</kbd> Stage mode<br><kbd>Esc</kbd> Exit stage mode / close this panel</p><p>Every screen is a scripted product scene. Activity and illustrated results are presentation states, not a live API run.</p><p><a href="README.md" target="_blank">Presenter guide</a> · <a href="images/" target="_blank">4K image set</a></p><button id="close-help" class="btn primary">Back to demo</button></div></div>
+<div id="help" class="help" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts"><div class="help-card"><h2>Four clicks. One story.</h2><p>Enter prompt → Run task → Create skill → Reuse skill. Each action plays through automatically, then pauses for you. Extra advances during playback are ignored.</p><p><kbd>→</kbd> or <kbd>Space</kbd> Start the next action<br><kbd>←</kbd> Previous stopping point<br><kbd>P</kbd> Play / pause / resume<br><kbd>R</kbd> Restart<br><kbd>N</kbd> Narration notes<br><kbd>F</kbd> Stage mode<br><kbd>Esc</kbd> Exit stage mode / close this panel</p><p>Play 60s runs the entire sequence without pauses. Every screen is a scripted product scene using synthetic data.</p><p><a href="README.md" target="_blank">Presenter guide</a> · <a href="images/" target="_blank">4K image set</a></p><button id="close-help" class="btn primary">Back to demo</button></div></div>
 <script src="scenes.js"></script><script src="player.js"></script>
 </body></html>

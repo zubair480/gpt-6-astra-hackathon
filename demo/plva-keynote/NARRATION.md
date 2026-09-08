@@ -1,6 +1,6 @@
 # One-minute narration
 
-Use Play 60s from the beginning or advance manually at these points. The video has no supplied audio so you can speak naturally over it.
+Use Play 60s from the beginning for the timed recording. For manual presenting, use four actions: Enter prompt, Run task, Create skill, and Reuse skill. Each action advances its intermediate scenes automatically and pauses for your narration. The demo has no supplied audio so you can speak naturally over it.
 
 | Time | Scene | Say |
 | --- | --- | --- |
@@ -17,6 +17,6 @@ About 124 spoken words. Leave small pauses around the protection reveal, the ski
 
 1. Open PLVA-DEMO.html, press R, then F for stage mode.
 2. Start recording a 16:9 canvas. Hide the operating system cursor away from the central screen.
-3. Press P for the timed sequence, or use Right arrow to follow your own cadence.
+3. Press P for the timed sequence, or use Right arrow four times, waiting for each action to finish before starting the next.
 4. Stop after the closing scene. Check the final cut is no longer than one minute.
 5. For the hackathon's execution evidence, include actual runtime footage or clearly distinguish this scripted illustration. Do not add a Live label or fabricated API receipt.

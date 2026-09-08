@@ -4,15 +4,22 @@ Open **PLVA-DEMO.html** in Chrome or Edge. It is self-contained and works offlin
 
 ## Present
 
-- **Right arrow, Space, Enter, or Next:** advance one scene.
-- **Left arrow:** return one scene.
-- **P / Play 60s:** play or pause the timeline. Use **R** first to begin from the start.
+- **Right arrow, Space, Enter, or the main button:** start the next action. Each action plays through automatically and pauses at its stopping point.
+- **Left arrow:** return to the previous stopping point.
+- **P / Play 60s:** start the full timeline, or pause/resume an active sequence. Use **R** first to begin from the start.
 - **R:** reset.
 - **N / Notes:** show or hide the current narration cue. Hide notes before recording.
 - **F / Stage:** hide controls and request fullscreen.
 - **Escape:** leave stage mode or close help.
 
-The first Next types the prompt. The second submits it and shows the loading/activity state. Subsequent advances reveal protection, form filling, a draft result, skill creation, and a fresh-input reuse example. Manual advances stop autoplay, so the presenter controls the pace. Autoplay from the start lasts exactly 60 seconds.
+Present the complete story with **four clicks**:
+
+1. **Enter prompt:** type the request, then pause at the ready prompt.
+2. **Run task:** show loading, protect details, fill the form, and pause at the first draft.
+3. **Create skill:** extract the procedure and pause at the inspectable skill.
+4. **Reuse skill:** introduce the new customer, show the changed form and `_2` references, and finish with the result and closing message.
+
+Extra advances during playback are ignored. Pause/resume remains available; Back and Reset cancel the current sequence. The four stopping points are scenes 2, 6, 8, and 12. The underlying visual states stay available through direct scene links. Play 60s from the start still runs exactly 60 seconds; manual mode adds however long you pause to speak.
 
 Use a 16:9 screen or recording canvas. The scene artwork uses a 1920×1080 coordinate system and scales sharply. If a browser blocks fullscreen, F still hides the controls; the browser's own F11 can fill the display.
 

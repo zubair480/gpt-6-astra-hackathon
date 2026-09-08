@@ -13,3 +13,5 @@ September 8, 2026.
 After playback validation, minor content corrections changed the field count to three and shortened narration cues. Timeline durations and navigation behavior remain unchanged.
 
 Second-customer scenes now consistently use [NAME_2], [EMAIL_2], and [ADDRESS_2], making the new inputs visually distinct from the first customer's references. The corresponding SVGs, 4K PNGs, storyboard, and portable demo were regenerated. `npm run check` verifies the customer distinction, 60-second timeline, portable source, and exported assets.
+
+The player now requires four main clicks: Enter prompt, Run task, Create skill, and Reuse skill. It automatically shows every intermediate scene and pauses at scenes 2, 6, 8, and 12. Player checks use a controlled animation clock to cover all four actions, duplicate clicks, pause/resume, Back/Reset, keyboard handling, deep links, typing, and uninterrupted 60-second autoplay.
