@@ -123,3 +123,37 @@ model now passes all 10 unchanged tests (17.354s), including exact normalized
 values and all source glyph pixel coverage assertions. The oracle was copied
 read-only and was not committed or altered by Session 3. This improves observed
 transcription fidelity without implying perfect recognition on arbitrary pages.
+
+## Real-site miss audit (source review)
+
+Session 5 observed one later HTTPBin native email-input failure for a newly
+generated `q` + six hexadecimal characters + `@example.com`. The failing nonce,
+raw PNG and OCR text were not retained, so the historical case is not exactly
+reproducible and no detector fix is claimed for it. Its exact-value assertion
+ran before glyph coverage; that failure alone establishes neither an uncovered
+private pixel nor a missing EMAIL classification. Earlier successful samples
+cannot establish reliability for the failed sample.
+
+The inspected browser uses a 1200 x 900 CSS-pixel viewport, below the OCR
+1280 detector and 4096 wrapper size limits. Downsampling from those limits is
+therefore unlikely for this case. Small native-input text, ambiguous glyphs,
+input clipping and OCR segmentation remain hypotheses pending a saved frame.
+Machine contention explains observed latency but is not a demonstrated cause of
+incorrect recognition.
+
+Lightweight classifier replay without OCR distinguishes three outcomes:
+an intact recognized email produces an exact EMAIL finding; a character
+substitution may still produce an EMAIL mask with an incorrect vault value;
+spaces inserted around `@` or the domain dot can prevent pattern classification.
+An internal space in the local part can produce a partial value while the whole
+OCR line is still masked. Recognized `Email:` context can mask malformed email
+text, but the current label vocabulary does not include `E-mail address:`.
+These source-level examples explain possible failure modes, not the unknown
+historical failure.
+
+Remaining detector acceptance is a coordinated fresh native-field test that
+records exact-value fidelity and glyph coverage independently. On failure,
+retain the synthetic oracle, empty/filled PNG, OCR regions, findings and field
+clipping measurements locally for replay; never send them to the provider or
+include raw values in exported evidence. Keep exact-value and pixel assertions
+unchanged. No new heavy OCR or browser runs were performed for this source audit.
