@@ -1,0 +1,3 @@
+[submodule "reference/browser-agent-privacy-layer"]
+	path = reference/browser-agent-privacy-layer
+	url = https://github.com/dael-amz/browser-agent-privacy-layer.git
