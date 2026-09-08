@@ -1,0 +1,84 @@
+{
+  "$id": "https://plva.local/contracts/v1/readiness-response.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "capabilities": {
+      "items": {
+        "enum": [
+          "approve",
+          "compute",
+          "review-trace"
+        ],
+        "type": "string"
+      },
+      "title": "Capabilities",
+      "type": "array"
+    },
+    "instance_id": {
+      "pattern": "^[A-Za-z0-9._-]{1,64}$",
+      "title": "Instance Id",
+      "type": "string"
+    },
+    "isolation": {
+      "enum": [
+        "unverified",
+        "verified",
+        "failed"
+      ],
+      "title": "Isolation",
+      "type": "string"
+    },
+    "mode": {
+      "enum": [
+        "mock",
+        "local"
+      ],
+      "title": "Mode",
+      "type": "string"
+    },
+    "model_loaded": {
+      "title": "Model Loaded",
+      "type": "boolean"
+    },
+    "ready_for_private_values": {
+      "title": "Ready For Private Values",
+      "type": "boolean"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "service_version": {
+      "maxLength": 32,
+      "title": "Service Version",
+      "type": "string"
+    },
+    "verified_at": {
+      "anyOf": [
+        {
+          "maxLength": 40,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Verified At"
+    }
+  },
+  "required": [
+    "mode",
+    "ready_for_private_values",
+    "model_loaded",
+    "isolation",
+    "capabilities",
+    "instance_id",
+    "service_version"
+  ],
+  "title": "ReadinessResponse",
+  "type": "object"
+}

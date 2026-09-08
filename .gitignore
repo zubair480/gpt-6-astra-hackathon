@@ -1,1 +1,10 @@
-.rocketride/
+.venv/
+__pycache__/
+*.pyc
+.env
+.plva-pr/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+models/

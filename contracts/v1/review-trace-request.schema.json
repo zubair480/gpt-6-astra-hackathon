@@ -1,0 +1,189 @@
+{
+  "$defs": {
+    "TraceEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "error_code": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Z][A-Z0-9_]{0,39}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error Code"
+        },
+        "kind": {
+          "enum": [
+            "action",
+            "observation",
+            "resolution_ok",
+            "resolution_denied",
+            "approval_requested",
+            "approval_denied",
+            "blocked_class_attempt",
+            "destination_mismatch",
+            "token_invalid",
+            "scrub_hit",
+            "error"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "pii_class": {
+          "anyOf": [
+            {
+              "enum": [
+                "NAME",
+                "EMAIL",
+                "PHONE",
+                "ADDRESS",
+                "DOB",
+                "GOV_ID",
+                "SSN",
+                "BANK_ACCOUNT",
+                "CARD_NUMBER",
+                "CVC",
+                "PASSWORD",
+                "API_KEY",
+                "AUTH_TOKEN",
+                "PRIVATE_KEY",
+                "SECRET"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pii Class"
+        },
+        "step": {
+          "maximum": 100000,
+          "minimum": 1,
+          "title": "Step",
+          "type": "integer"
+        },
+        "token": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "pattern": "^[A-Z][A-Z0-9_]*_[1-9][0-9]*_[0-9a-f]{4}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Token"
+        },
+        "tool_name": {
+          "anyOf": [
+            {
+              "enum": [
+                "type",
+                "write",
+                "paste",
+                "fill"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tool Name"
+        }
+      },
+      "required": [
+        "step",
+        "kind"
+      ],
+      "title": "TraceEvent",
+      "type": "object"
+    },
+    "TracePolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "denied_resolution_threshold": {
+          "default": 3,
+          "maximum": 100,
+          "minimum": 1,
+          "title": "Denied Resolution Threshold",
+          "type": "integer"
+        },
+        "halt_on_blocked_class_attempt": {
+          "default": true,
+          "title": "Halt On Blocked Class Attempt",
+          "type": "boolean"
+        },
+        "window_steps": {
+          "default": 8,
+          "maximum": 1000,
+          "minimum": 1,
+          "title": "Window Steps",
+          "type": "integer"
+        }
+      },
+      "title": "TracePolicy",
+      "type": "object"
+    }
+  },
+  "$id": "https://plva.local/contracts/v1/review-trace-request.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "events": {
+      "items": {
+        "$ref": "#/$defs/TraceEvent"
+      },
+      "maxItems": 200,
+      "minItems": 1,
+      "title": "Events",
+      "type": "array"
+    },
+    "policy": {
+      "$ref": "#/$defs/TracePolicy",
+      "default": {
+        "denied_resolution_threshold": 3,
+        "halt_on_blocked_class_attempt": true,
+        "window_steps": 8
+      }
+    },
+    "request_id": {
+      "pattern": "^[A-Za-z0-9._-]{1,64}$",
+      "title": "Request Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "session_id": {
+      "pattern": "^[A-Za-z0-9._-]{1,64}$",
+      "title": "Session Id",
+      "type": "string"
+    },
+    "task_context": {
+      "default": "",
+      "maxLength": 1000,
+      "title": "Task Context",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "session_id",
+    "request_id",
+    "events"
+  ],
+  "title": "ReviewTraceRequest",
+  "type": "object"
+}

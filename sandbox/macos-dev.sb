@@ -1,0 +1,61 @@
+;; PLVA private reasoning: macOS DEV-ONLY fallback profile for sandbox-exec (Seatbelt).
+;;
+;; THIS IS NOT THE ISOLATION TARGET. sandbox-exec is deprecated by Apple (still present on
+;; macOS 26 but unsupported and undocumented), it confines a process, not a network
+;; namespace, and it is NOT equivalent to NVIDIA OpenShell. It exists so that the deny
+;; checks, the evidence pipeline, and the readiness gating can be exercised on an Apple
+;; Silicon developer machine where OpenShell cannot run (no Docker/Podman available).
+;; Use it for development with SYNTHETIC values. See docs/SECURITY.md.
+;;
+;; Parameters (passed with `sandbox-exec -D name=value`):
+;;   service_port  loopback port the service may bind and accept on   (default 18555)
+;;   inner_port    OPTIONAL. Loopback port the service may CONNECT to, for an in-sandbox
+;;                 llama-server started under the same profile. OMIT it when inference
+;;                 is in-process; then no loopback outbound rule exists at all.
+;;   write_dir     the only writable directory (runtime dir: credential + evidence)
+;;
+;; Verified empirically on this machine (macOS 26.4, arm64): denied socket operations
+;; fail immediately with EPERM for TCP connect, UDP connect/send, and non-allowed loopback
+;; binds; getaddrinfo fails fast with EAI_NONAME because the resolver IPC is denied.
+
+(version 1)
+
+;; Baseline: allow everything, then carve out the denials below. A deny-default profile
+;; that still lets CPython + uvicorn start needs dozens of mach/sysctl/iokit allowances
+;; and is fragile across macOS releases; for a dev-only fallback the explicit network
+;; and write denials are what matter.
+(allow default)
+
+;; ---- network -------------------------------------------------------------------------
+;; Deny every socket operation: outbound (TCP/UDP/any family), inbound, bind. This also
+;; denies the resolver IPC, so DNS fails fast. Loopback is included: a host process
+;; listening on 127.0.0.1 (a SOCKS/HTTP proxy, a tunnel) would otherwise be an egress
+;; route, because sandbox-exec shares the host's loopback interface.
+(deny network*)
+
+;; The ONLY inbound path: bind + accept on the service port on loopback. This is the
+;; sandbox-exec analogue of OpenShell's gateway port forward. Accepting a connection
+;; does not grant the ability to initiate one.
+(allow network-bind (local ip (string-append "localhost:" (param "service_port"))))
+(allow network-inbound (local ip (string-append "localhost:" (param "service_port"))))
+
+;; The ONLY outbound path, and only when the launcher passes -D inner_port=N: loopback
+;; to the inner model port, for a subprocess llama-server that runs under this same
+;; profile. CAVEAT (documented): sandbox-exec cannot tell which process listens on that
+;; port, so an unsandboxed host process that squats on inner_port before launch would be
+;; reachable. Omit inner_port when inference is in-process to close this route entirely
+;; (an unset param evaluates false, so no outbound rule is emitted).
+(if (param "inner_port")
+    (allow network-outbound (remote ip (string-append "localhost:" (param "inner_port")))))
+
+;; ---- filesystem ----------------------------------------------------------------------
+;; No persistent writes anywhere except the runtime dir (credential file, evidence).
+;; The model file, the venv, and the repo remain readable (allow default) but read-only.
+;; Python silently skips .pyc writes when they fail, so a read-only venv works.
+(deny file-write*)
+(allow file-write* (subpath (param "write_dir")))
+;; Writing to the null device is not a persistent write.
+(allow file-write-data (literal "/dev/null"))
+;; Terminal output for the launcher's foreground/log capture.
+(allow file-write-data (regex #"^/dev/tty"))
+(allow file-write-data (regex #"^/dev/fd/"))

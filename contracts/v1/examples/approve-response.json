@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0",
+  "session_id": "demo-session",
+  "request_id": "approval-001",
+  "decision": "approve",
+  "reason_code": "POLICY_MATCH",
+  "scope": {
+    "token": "API_KEY_1_a3f9",
+    "tool_name": "type",
+    "argument_path": "text",
+    "origin": "https://service.example",
+    "field_id": "api-key-input",
+    "ttl_seconds": 30,
+    "max_uses": 1
+  }
+}

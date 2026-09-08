@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0",
+  "session_id": "demo-session",
+  "request_id": "approval-001",
+  "token": "API_KEY_1_a3f9",
+  "pii_class": "API_KEY",
+  "tool_name": "type",
+  "argument_path": "text",
+  "destination": {
+    "origin": "https://service.example",
+    "field_id": "api-key-input",
+    "verified_by_runtime": true
+  },
+  "task_context": "Configure the authorized integration.",
+  "policy": {
+    "policy_id": "integration-policy-v1",
+    "rules": ["Use this key only in the integration credential field."],
+    "allowed_origins": ["https://service.example"],
+    "allowed_fields": ["api-key-input"],
+    "max_ttl_seconds": 60,
+    "max_uses": 1
+  }
+}

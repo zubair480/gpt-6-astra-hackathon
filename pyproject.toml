@@ -1,0 +1,62 @@
+[project]
+name = "plva-private-reasoning"
+version = "0.1.0"
+description = "Optional local private-reasoning module for PLVA: approve, compute, review-trace over loopback"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+dependencies = [
+  "fastapi>=0.128.0,<0.129",
+  "pydantic>=2.10,<3",
+  "uvicorn>=0.40.0,<0.41",
+]
+
+[project.scripts]
+plva-pr-mock = "plva_private_reasoning.cli:main_mock"
+plva-pr-local = "plva_private_reasoning.model.cli:main_local"
+plva-pr-fake-core = "plva_private_reasoning.client.fake_core:main"
+
+[project.optional-dependencies]
+# Real local inference. Owned by the model track; pin exact versions there.
+local = ["llama-cpp-python==0.3.35"]
+
+[build-system]
+requires = ["hatchling>=1.28.0"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+demo = [
+    "openai>=3.9.0",
+    "pillow>=12.3.0",
+    "playwright>=1.62.0",
+]
+dev = [
+  "httpx>=0.28.1,<0.29",
+  "jsonschema>=4.23,<5",
+  "mypy>=1.19.1,<2",
+  "pytest>=9.0.2,<10",
+  "pytest-cov>=7.0.0,<8",
+  "ruff>=0.14.14,<0.15",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/plva_private_reasoning"]
+
+[tool.pytest.ini_options]
+addopts = "--strict-markers --strict-config -p no:cacheprovider"
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "SIM", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/plva_agent_demo/runner.py" = ["E501"]  # prompt text and JSON schema literals
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+packages = ["plva_private_reasoning"]

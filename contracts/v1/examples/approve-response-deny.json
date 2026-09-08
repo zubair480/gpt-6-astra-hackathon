@@ -1,0 +1,8 @@
+{
+  "schema_version": "1.0",
+  "session_id": "demo-session",
+  "request_id": "approval-002",
+  "decision": "deny",
+  "reason_code": "ORIGIN_NOT_ALLOWED",
+  "scope": null
+}

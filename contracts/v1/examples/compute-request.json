@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "session_id": "demo-session",
+  "request_id": "compute-001",
+  "operation": "sort",
+  "instruction": "Alphabetical order by full name.",
+  "items": [
+    {"token": "NAME_1_a3f9", "value": "Charlie Example"},
+    {"token": "NAME_2_a3f9", "value": "Alice Example"}
+  ],
+  "select_count": null
+}

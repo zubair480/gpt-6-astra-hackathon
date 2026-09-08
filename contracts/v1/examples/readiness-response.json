@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0",
+  "mode": "mock",
+  "ready_for_private_values": false,
+  "model_loaded": false,
+  "isolation": "unverified",
+  "capabilities": ["approve", "compute", "review-trace"],
+  "instance_id": "0f3c2d9e4b8a4c1d9e7f6a5b4c3d2e1f",
+  "service_version": "0.1.0",
+  "verified_at": null
+}

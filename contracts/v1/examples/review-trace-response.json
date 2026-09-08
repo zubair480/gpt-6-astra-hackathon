@@ -1,0 +1,7 @@
+{
+  "schema_version": "1.0",
+  "session_id": "demo-session",
+  "request_id": "trace-001",
+  "action": "halt",
+  "reason_code": "BLOCKED_CLASS_ATTEMPT"
+}

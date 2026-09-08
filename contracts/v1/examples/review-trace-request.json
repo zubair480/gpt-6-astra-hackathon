@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "session_id": "demo-session",
+  "request_id": "trace-001",
+  "events": [
+    {"step": 1, "kind": "action", "tool_name": "type"},
+    {"step": 2, "kind": "resolution_denied", "token": "PASSWORD_1_a3f9", "pii_class": "PASSWORD", "tool_name": "write"},
+    {"step": 3, "kind": "resolution_denied", "token": "PASSWORD_1_a3f9", "pii_class": "PASSWORD", "tool_name": "write"},
+    {"step": 4, "kind": "blocked_class_attempt", "pii_class": "CARD_NUMBER", "tool_name": "write"}
+  ],
+  "task_context": "Update the account display name.",
+  "policy": {
+    "denied_resolution_threshold": 3,
+    "window_steps": 8,
+    "halt_on_blocked_class_attempt": true
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "$id": "https://plva.local/contracts/v1/error-body.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Fixed error body. Never carries any part of the rejected input.",
+  "properties": {
+    "error_code": {
+      "pattern": "^[A-Z][A-Z0-9_]{0,39}$",
+      "title": "Error Code",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "error_code"
+  ],
+  "title": "ErrorBody",
+  "type": "object"
+}

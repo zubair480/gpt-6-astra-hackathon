@@ -1,0 +1,8 @@
+{
+  "schema_version": "1.0",
+  "session_id": "demo-session",
+  "request_id": "compute-002",
+  "status": "error",
+  "tokens": [],
+  "reason_code": "MODEL_OUTPUT_INVALID"
+}

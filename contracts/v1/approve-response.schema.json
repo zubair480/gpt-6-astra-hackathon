@@ -1,0 +1,118 @@
+{
+  "$defs": {
+    "ApprovalScope": {
+      "additionalProperties": false,
+      "properties": {
+        "argument_path": {
+          "maxLength": 64,
+          "pattern": "^[a-z_][a-z0-9_]*(\\.[a-z_][a-z0-9_]*|\\[[0-9]+\\])*$",
+          "title": "Argument Path",
+          "type": "string"
+        },
+        "field_id": {
+          "pattern": "^[A-Za-z0-9._:-]{1,128}$",
+          "title": "Field Id",
+          "type": "string"
+        },
+        "max_uses": {
+          "maximum": 10,
+          "minimum": 1,
+          "title": "Max Uses",
+          "type": "integer"
+        },
+        "origin": {
+          "maxLength": 253,
+          "pattern": "^https?://[A-Za-z0-9.-]+(:[0-9]{1,5})?$",
+          "title": "Origin",
+          "type": "string"
+        },
+        "token": {
+          "maxLength": 64,
+          "pattern": "^[A-Z][A-Z0-9_]*_[1-9][0-9]*_[0-9a-f]{4}$",
+          "title": "Token",
+          "type": "string"
+        },
+        "tool_name": {
+          "enum": [
+            "type",
+            "write",
+            "paste",
+            "fill"
+          ],
+          "title": "Tool Name",
+          "type": "string"
+        },
+        "ttl_seconds": {
+          "maximum": 300,
+          "minimum": 1,
+          "title": "Ttl Seconds",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "token",
+        "tool_name",
+        "argument_path",
+        "origin",
+        "field_id",
+        "ttl_seconds",
+        "max_uses"
+      ],
+      "title": "ApprovalScope",
+      "type": "object"
+    }
+  },
+  "$id": "https://plva.local/contracts/v1/approve-response.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "decision": {
+      "enum": [
+        "approve",
+        "deny"
+      ],
+      "title": "Decision",
+      "type": "string"
+    },
+    "reason_code": {
+      "pattern": "^[A-Z][A-Z0-9_]{0,39}$",
+      "title": "Reason Code",
+      "type": "string"
+    },
+    "request_id": {
+      "pattern": "^[A-Za-z0-9._-]{1,64}$",
+      "title": "Request Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "scope": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ApprovalScope"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "session_id": {
+      "pattern": "^[A-Za-z0-9._-]{1,64}$",
+      "title": "Session Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "session_id",
+    "request_id",
+    "decision",
+    "reason_code",
+    "scope"
+  ],
+  "title": "ApproveResponse",
+  "type": "object"
+}

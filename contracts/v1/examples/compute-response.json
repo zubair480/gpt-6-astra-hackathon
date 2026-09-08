@@ -1,0 +1,8 @@
+{
+  "schema_version": "1.0",
+  "session_id": "demo-session",
+  "request_id": "compute-001",
+  "status": "ok",
+  "tokens": ["NAME_2_a3f9", "NAME_1_a3f9"],
+  "reason_code": "COMPLETED"
+}

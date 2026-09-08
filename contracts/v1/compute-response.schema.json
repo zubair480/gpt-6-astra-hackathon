@@ -1,0 +1,56 @@
+{
+  "$id": "https://plva.local/contracts/v1/compute-response.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "reason_code": {
+      "pattern": "^[A-Z][A-Z0-9_]{0,39}$",
+      "title": "Reason Code",
+      "type": "string"
+    },
+    "request_id": {
+      "pattern": "^[A-Za-z0-9._-]{1,64}$",
+      "title": "Request Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "session_id": {
+      "pattern": "^[A-Za-z0-9._-]{1,64}$",
+      "title": "Session Id",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "ok",
+        "denied",
+        "error"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "tokens": {
+      "items": {
+        "maxLength": 64,
+        "pattern": "^[A-Z][A-Z0-9_]*_[1-9][0-9]*_[0-9a-f]{4}$",
+        "type": "string"
+      },
+      "maxItems": 40,
+      "title": "Tokens",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "session_id",
+    "request_id",
+    "status",
+    "tokens",
+    "reason_code"
+  ],
+  "title": "ComputeResponse",
+  "type": "object"
+}

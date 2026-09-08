@@ -1,0 +1,45 @@
+{
+  "$id": "https://plva.local/contracts/v1/review-trace-response.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "action": {
+      "enum": [
+        "continue",
+        "warn",
+        "halt"
+      ],
+      "title": "Action",
+      "type": "string"
+    },
+    "reason_code": {
+      "pattern": "^[A-Z][A-Z0-9_]{0,39}$",
+      "title": "Reason Code",
+      "type": "string"
+    },
+    "request_id": {
+      "pattern": "^[A-Za-z0-9._-]{1,64}$",
+      "title": "Request Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "session_id": {
+      "pattern": "^[A-Za-z0-9._-]{1,64}$",
+      "title": "Session Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "session_id",
+    "request_id",
+    "action",
+    "reason_code"
+  ],
+  "title": "ReviewTraceResponse",
+  "type": "object"
+}

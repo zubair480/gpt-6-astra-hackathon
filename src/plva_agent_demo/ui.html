@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PLVA agent demo</title>
+<style>
+:root{
+  --bg:#0f1115;--panel:#171a21;--panel2:#0b0d11;--line:#262b36;--line2:#323847;
+  --fg:#e6e8ee;--dim:#8b93a7;--mute:#5c637a;
+  --ok:#3ddc97;--warn:#f5c451;--bad:#ff6b6b;--acc:#7aa2ff;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;
+  --r:8px;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:13.5px/1.45 var(--sans);-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+code,.mono{font-family:var(--mono);font-size:12.5px}
+a{color:var(--acc)}
+
+/* ---------- top bar ---------- */
+.top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:8px;padding:10px 16px;
+  background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.top h1{font-size:15px;font-weight:600;margin:0 8px 0 0;letter-spacing:.01em;white-space:nowrap}
+.sep{width:1px;height:22px;background:var(--line);margin:0 4px}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;
+  border:1px solid var(--line);color:var(--dim);white-space:nowrap;line-height:1.3}
+.pill b{font-weight:600;color:var(--fg)}
+.pill.ok{color:var(--ok);border-color:var(--ok)}
+.pill.warn{color:var(--warn);border-color:var(--warn)}
+.pill.bad{color:var(--bad);border-color:var(--bad)}
+.pill.acc{color:var(--acc);border-color:var(--acc)}
+.pill .dot{width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.9}
+.pill.running .dot{animation:pulse 1.1s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.35}50%{opacity:1}}
+.spacer{flex:1}
+.count{font-family:var(--mono);font-size:12.5px;color:var(--dim)}
+.count b{color:var(--fg);font-weight:600}
+.count.bad{color:var(--bad)}.count.bad b{color:var(--bad)}
+
+/* master toggle */
+.master{display:inline-flex;align-items:center;gap:10px;padding:5px 12px 5px 6px;border-radius:999px;
+  border:1px solid var(--line);background:var(--panel2);cursor:pointer;user-select:none}
+.master .sw{position:relative;width:46px;height:26px;border-radius:999px;background:#2a2f3c;transition:background .18s;flex-shrink:0}
+.master .sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;
+  transition:transform .18s;box-shadow:0 1px 3px rgba(0,0,0,.5)}
+.master input{position:absolute;opacity:0;width:0;height:0}
+.master input:checked+.sw{background:var(--ok)}
+.master input:checked+.sw::after{transform:translateX(20px)}
+.master input:disabled+.sw{opacity:.55}
+.master .lbl{font-weight:700;font-size:13px;letter-spacing:.06em}
+.master .sub{font-size:11.5px;color:var(--dim)}
+.master.off{border-color:var(--bad)}
+.master.off .lbl{color:var(--bad)}
+
+.banner{display:none;align-items:center;justify-content:center;gap:12px;padding:8px 16px;
+  background:#3a1518;color:#ffb3b3;border-bottom:1px solid #6a2228;font-weight:600;letter-spacing:.06em;font-size:12.5px}
+.banner.show{display:flex}
+.banner small{font-weight:400;letter-spacing:0;color:#e69b9b}
+
+/* ---------- layout ---------- */
+.wrap{display:grid;grid-template-columns:minmax(0,1fr) 440px;gap:8px;padding:8px 16px 32px}
+.col{display:flex;flex-direction:column;gap:8px;min-width:0}
+@media (max-width:1180px){.wrap{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.card h2{margin:0;font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);font-weight:600;
+  display:flex;align-items:center;gap:8px}
+.card h2 .r{margin-left:auto;display:inline-flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-weight:400;font-size:12px}
+.hint{font-size:12px;color:var(--dim)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+input[type=text],input[type=number],input[type=url],textarea,select{
+  background:var(--panel2);border:1px solid var(--line);border-radius:var(--r);color:var(--fg);padding:7px 9px;outline:none}
+input:focus,textarea:focus,select:focus{border-color:var(--acc)}
+input[type=url]{flex:1;min-width:280px;font-family:var(--mono);font-size:12.5px}
+input[type=number]{width:72px;font-family:var(--mono)}
+input#model{width:190px;font-family:var(--mono);font-size:12.5px}
+textarea{width:100%;min-height:58px;resize:vertical;line-height:1.4}
+label.f{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--dim);white-space:nowrap}
+button{background:#20242e;color:var(--fg);border:1px solid var(--line);border-radius:var(--r);padding:7px 12px;cursor:pointer;font-size:13px;line-height:1.2}
+button:hover:not(:disabled){filter:brightness(1.15)}
+button:disabled{opacity:.45;cursor:not-allowed}
+button.primary{background:var(--acc);border-color:var(--acc);color:#0b0d11;font-weight:600;padding-inline:18px}
+button.danger{border-color:#5a2a2e;color:var(--bad)}
+button.link{background:none;border:none;padding:0;color:var(--acc);font-size:12px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:12px;color:var(--dim);cursor:pointer}
+.chip:hover{color:var(--fg);border-color:var(--line2)}
+.toggle{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--dim);cursor:pointer;user-select:none}
+.toggle input{accent-color:var(--acc);margin:0}
+
+/* policy editor */
+details.policy summary{cursor:pointer;font-size:12px;color:var(--dim);list-style:none;display:flex;align-items:center;gap:8px}
+details.policy summary::before{content:"▸";font-size:11px;transition:transform .15s}
+details.policy[open] summary::before{transform:rotate(90deg)}
+details.policy summary .r{margin-left:auto;display:inline-flex;gap:8px;align-items:center}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:6px 12px;margin-top:8px}
+.prow{display:grid;grid-template-columns:1fr 112px;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--line)}
+.prow code{color:var(--fg)}
+.prow select{padding:4px 6px;font-size:12px;border-radius:6px}
+.prow select.hide_use{color:var(--ok)}.prow select.approval{color:var(--warn)}.prow select.blocked{color:var(--bad)}
+.legend{display:flex;gap:12px;font-size:11.5px;color:var(--dim)}
+.legend i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px}
+
+/* frames */
+.frames{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media (max-width:860px){.frames{grid-template-columns:1fr}}
+.frame{position:relative;background:var(--panel2);border:1px solid var(--line);border-radius:var(--r);min-height:260px;
+  display:grid;place-items:center;overflow:hidden}
+.frame img{max-width:100%;max-height:520px;display:block;transition:filter .2s}
+.frame img.blur{filter:blur(14px) saturate(.6);transform:scale(1.03)}
+.frame .empty{color:var(--mute);font-size:12.5px;text-align:center;padding:24px}
+.frame .veil{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;font-size:12px;color:var(--dim);
+  background:linear-gradient(transparent,rgba(11,13,17,.35));text-shadow:0 1px 2px #000}
+.frame .veil.hide{display:none}
+.frame .tag{position:absolute;top:8px;left:8px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:4px;
+  background:rgba(11,13,17,.85);border:1px solid var(--line);color:var(--dim)}
+.frame .tag.ok{color:var(--ok);border-color:var(--ok)}
+.frame .tag.bad{color:var(--bad);border-color:var(--bad)}
+.metrics{display:flex;gap:6px;flex-wrap:wrap}
+.metric{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:3px 9px;font-size:12px;color:var(--dim);font-family:var(--mono)}
+.metric b{color:var(--fg);font-weight:600}
+
+/* timeline */
+.steps{display:flex;flex-direction:column;gap:6px;max-height:640px;overflow:auto;padding-right:2px}
+.step{border:1px solid var(--line);border-radius:var(--r);background:var(--panel2);padding:8px 10px;cursor:pointer;display:flex;flex-direction:column;gap:6px}
+.step:hover{border-color:var(--line2)}
+.step.sel{border-color:var(--acc);box-shadow:inset 2px 0 0 var(--acc)}
+.step .head{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.step .n{font-family:var(--mono);font-weight:700;color:var(--acc)}
+.step .url{font-family:var(--mono);font-size:11.5px;color:var(--mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:360px}
+.step .lat{margin-left:auto;font-family:var(--mono);font-size:11.5px;color:var(--dim);white-space:nowrap}
+.step .reason{color:var(--fg);font-size:12.5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.step .reason:empty{display:none}
+.step pre{margin:0;font:12px/1.45 var(--mono);color:#c9d1e6;white-space:pre-wrap;word-break:break-word;background:#0d0f14;border:1px solid var(--line);border-radius:6px;padding:6px 8px}
+.evs{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:3px}
+.ev{display:grid;grid-template-columns:150px 1fr;gap:8px;font-size:12px;align-items:baseline}
+.ev .k{font-family:var(--mono);font-size:11.5px;letter-spacing:.02em}
+.ev .d{color:var(--dim);word-break:break-word}
+.ev .d code{color:var(--fg);background:#0d0f14;border:1px solid var(--line);border-radius:4px;padding:0 4px;font-size:11.5px}
+.ev.ok .k{color:var(--ok)}.ev.bad .k{color:var(--bad)}.ev.warn .k{color:var(--warn)}.ev.dim .k{color:var(--mute)}
+.halt{border:1px solid #6a2228;background:#3a1518;color:#ffb3b3;border-radius:6px;padding:6px 8px;font-size:12px;font-weight:600}
+.halt small{font-weight:400;color:#e69b9b;margin-left:6px}
+
+/* tables */
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;color:var(--mute);font-weight:500;padding:3px 6px;border-bottom:1px solid var(--line);font-size:11px;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap}
+td{padding:5px 6px;border-bottom:1px solid var(--line);vertical-align:top;word-break:break-word}
+tr:last-child td{border-bottom:0}
+td.mono,td code{font-family:var(--mono);font-size:11.5px;white-space:nowrap}
+td.num{text-align:right;font-family:var(--mono);color:var(--dim);white-space:nowrap}
+.tbl{max-height:260px;overflow:auto}
+.tbl table{min-width:100%}
+.never{white-space:nowrap}
+.empty-row td{color:var(--mute);text-align:center;padding:12px}
+.lv{display:inline-block;font-size:10.5px;padding:1px 7px;border-radius:999px;border:1px solid currentColor;letter-spacing:.03em;white-space:nowrap}
+.lv.hide_use{color:var(--ok)}.lv.approval{color:var(--warn)}.lv.blocked{color:var(--bad)}
+.c-ok{color:var(--ok)}.c-bad{color:var(--bad)}.c-warn{color:var(--warn)}.c-dim{color:var(--dim)}
+.secret{font-family:var(--mono);filter:blur(5px);user-select:none;color:var(--dim)}
+.secret.show{filter:none;user-select:text;color:var(--fg)}
+.never{color:var(--mute);font-style:italic}
+
+/* summary */
+.summary{display:none;border-left:3px solid var(--acc)}
+.summary.show{display:flex}
+.summary.done{border-left-color:var(--ok)}.summary.halted{border-left-color:var(--warn)}.summary.failed{border-left-color:var(--bad)}
+.summary p{margin:0;font-size:13px}
+.summary .kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:6px}
+.summary .kv div{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:6px 8px}
+.summary .kv b{display:block;font-size:16px;font-family:var(--mono);font-weight:600}
+.summary .kv span{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em}
+
+.toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,60px);opacity:0;background:#20242e;border:1px solid var(--line2);
+  color:var(--fg);padding:8px 14px;border-radius:var(--r);font-size:12.5px;transition:.2s;z-index:20;pointer-events:none;max-width:70vw}
+.toast.show{transform:translate(-50%,0);opacity:1}
+.toast.bad{border-color:var(--bad);color:#ffb3b3}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <h1>PLVA agent demo</h1>
+  <label class="master" id="master" title="Master switch: redact every frame before it leaves this machine">
+    <input type="checkbox" id="plva" checked>
+    <span class="sw"></span>
+    <span><span class="lbl">PLVA</span><br><span class="sub" id="plva-sub">redaction on</span></span>
+  </label>
+  <span class="sep"></span>
+  <span class="pill" id="status"><span class="dot"></span><span id="status-t">idle</span></span>
+  <span class="count" id="stepc">step <b>0</b> / –</span>
+  <span class="pill" id="model-pill" title="cloud model">model <b id="model-t">–</b></span>
+  <span class="sep"></span>
+  <span class="pill" id="rd-mode" title="private reasoning mode">mode: –</span>
+  <span class="pill" id="rd-ready" title="ready_for_private_values">ready: –</span>
+  <span class="pill" id="rd-iso" title="isolation">isolation: –</span>
+  <span class="spacer"></span>
+  <span class="count" id="outc">outbound <b>0</b></span>
+  <span class="count" id="leakc">leaks found: <b>0</b></span>
+  <span class="pill" id="conn" title="UI connection">ui</span>
+</header>
+<div class="banner" id="banner">RAW FRAMES UPSTREAM — COMPARISON MODE <small>every screenshot is sent to the cloud model unredacted</small></div>
+
+<div class="wrap">
+  <!-- ================= main column ================= -->
+  <div class="col">
+    <section class="card" id="run">
+      <h2>Run <span class="r hint" id="run-hint">synthetic data only · the agent browses the URL below and follows the task</span></h2>
+      <div class="row">
+        <input type="url" id="url" placeholder="http://127.0.0.1:18600/api/test-page" spellcheck="false">
+        <label class="f">max steps <input type="number" id="max" min="1" max="100" value="15"></label>
+        <label class="f">model <input type="text" id="model" placeholder="default" spellcheck="false"></label>
+        <button class="primary" id="btn-run">Run</button>
+        <button class="danger" id="btn-stop" disabled>Stop</button>
+      </div>
+      <textarea id="task" placeholder="What should the agent do on that page?"></textarea>
+      <div class="chips" id="chips"></div>
+      <details class="policy" id="policy">
+        <summary>Policy per class <span class="r"><span class="hint" id="pol-sum"></span><button class="link" id="pol-reset" type="button">reset to defaults</button></span></summary>
+        <div class="legend" style="margin-top:8px">
+          <span><i style="background:var(--ok)"></i>hide_use: redacted upstream, resolved freely locally</span>
+          <span><i style="background:var(--warn)"></i>approval: resolved only with a scoped local approval</span>
+          <span><i style="background:var(--bad)"></i>blocked: never vaulted, never resolvable</span>
+        </div>
+        <div class="pgrid" id="pgrid"></div>
+      </details>
+    </section>
+
+    <section class="card summary" id="summary">
+      <h2>Run summary <span class="r"><span id="sum-status" class="pill"></span></span></h2>
+      <p id="sum-text"></p>
+      <div class="kv" id="sum-kv"></div>
+    </section>
+
+    <section class="card">
+      <h2>Frames
+        <span class="r">
+          <span class="hint" id="frame-which">no frames yet</span>
+          <button class="link" id="follow" hidden>follow latest</button>
+        </span>
+      </h2>
+      <div class="frames">
+        <div>
+          <div class="frame" id="cloud-frame">
+            <span class="tag ok" id="cloud-tag">what the cloud model saw</span>
+            <img id="cloud-img" alt="" hidden>
+            <div class="empty" id="cloud-empty">Nothing has left the machine yet.</div>
+          </div>
+          <div class="metrics" id="cloud-metrics" style="margin-top:8px"></div>
+        </div>
+        <div>
+          <div class="frame" id="local-frame">
+            <span class="tag" id="local-tag">local screen · never leaves this machine</span>
+            <img id="local-img" class="blur" alt="" hidden>
+            <div class="veil" id="local-veil">blurred in the UI · toggle reveal to inspect</div>
+            <div class="empty" id="local-empty">No local capture yet.</div>
+          </div>
+          <div class="row" style="margin-top:8px;justify-content:space-between">
+            <label class="toggle"><input type="checkbox" id="reveal-local"> reveal local view</label>
+            <span class="hint mono" id="local-metrics"></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Step timeline <span class="r hint" id="tl-hint">click a step to inspect its frames · tokens are shown, values never</span></h2>
+      <div class="steps" id="steps"><div class="hint" style="padding:8px 0">No steps yet.</div></div>
+    </section>
+  </div>
+
+  <!-- ================= side column ================= -->
+  <div class="col">
+    <section class="card">
+      <h2>Vault <span class="r"><span class="hint">memory only · this process</span>
+        <label class="toggle"><input type="checkbox" id="reveal-vault"> reveal values</label></span></h2>
+      <div class="tbl"><table id="vault">
+        <thead><tr><th>token</th><th>class</th><th>level</th><th style="text-align:right">used</th><th>value</th></tr></thead>
+        <tbody></tbody></table></div>
+    </section>
+
+    <section class="card">
+      <h2>Approvals <span class="r hint">POST /v1/approve</span></h2>
+      <div class="tbl"><table id="approvals">
+        <thead><tr><th>step</th><th>token</th><th>class</th><th>decision</th><th>reason</th><th>scope</th><th style="text-align:right">ms</th></tr></thead>
+        <tbody></tbody></table></div>
+    </section>
+
+    <section class="card">
+      <h2>Reviews <span class="r hint">POST /v1/review-trace</span></h2>
+      <div class="tbl"><table id="reviews">
+        <thead><tr><th>step</th><th>action</th><th>reason</th><th style="text-align:right">ms</th></tr></thead>
+        <tbody></tbody></table></div>
+    </section>
+
+    <section class="card">
+      <h2>Private computes <span class="r hint">POST /v1/compute</span></h2>
+      <div class="tbl"><table id="computes">
+        <thead><tr><th>step</th><th>operation</th><th>status</th><th>tokens</th></tr></thead>
+        <tbody></tbody></table></div>
+    </section>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const CLASSES = ["NAME","EMAIL","PHONE","ADDRESS","DOB","GOV_ID","SSN","BANK_ACCOUNT","CARD_NUMBER","CVC",
+                 "PASSWORD","API_KEY","AUTH_TOKEN","PRIVATE_KEY","SECRET"];
+const LEVELS = ["hide_use","approval","blocked"];
+const TASKS = [
+  "Change the display name to alice_2026 and save",
+  "Paste my Acme API key into the Connect analytics field and click Connect",
+  "Send a support message that includes my email address",
+  "List the team members sorted alphabetically by name",
+];
+const POLL_MS = 700;
+const EV_CLASS = {
+  resolution_ok:"ok",
+  resolution_denied:"bad", blocked_class_attempt:"bad", destination_mismatch:"bad", token_invalid:"bad", error:"bad", halt:"bad",
+  approval_requested:"warn", approval_granted:"warn", approval_denied:"warn", approval_expired:"warn", scrub_hit:"warn",
+  action:"dim", observation:"dim",
+};
+
+let version = -1;      // last version rendered
+let view = null;       // last /api/state payload
+let selected = null;   // step number selected in the timeline; null = follow latest
+let defaultPolicy = {};
+let lastCloudSrc = "", lastLocalSrc = "";
+let toastTimer = null;
+
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const ms = v => (v == null ? "–" : Math.round(v) + " ms");
+const kb = n => (n == null ? "–" : n < 1024 ? n + " B" : (n / 1024).toFixed(1) + " KB");
+const tokenize = s => esc(s).replace(/«[^»]+»/g, m => `<code>${m}</code>`);
+
+function toast(msg, bad) {
+  const t = $("toast"); t.textContent = msg; t.className = "toast show" + (bad ? " bad" : "");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.className = "toast", 3200);
+}
+
+/* ---------------- run panel ---------------- */
+function initRunPanel() {
+  $("url").value = location.origin + "/api/test-page";
+  const chips = $("chips");
+  TASKS.forEach(t => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.textContent = t;
+    b.onclick = () => { $("task").value = t; $("task").focus(); };
+    chips.appendChild(b);
+  });
+  $("task").value = TASKS[0];
+  $("plva").addEventListener("change", renderMaster);
+  $("btn-run").onclick = startRun;
+  $("btn-stop").onclick = stopRun;
+  $("pol-reset").onclick = e => { e.preventDefault(); setPolicy(defaultPolicy); };
+  $("reveal-local").addEventListener("change", () => renderFrames(view));
+  $("reveal-vault").addEventListener("change", () => { version = -1; poll(); });
+  $("follow").onclick = () => { selected = null; render(); };
+  renderMaster();
+}
+
+function renderMaster() {
+  const on = $("plva").checked;
+  $("master").classList.toggle("off", !on);
+  $("plva-sub").textContent = on ? "redaction on" : "redaction OFF";
+  $("banner").classList.toggle("show", !on);
+}
+
+function buildPolicyGrid(policy) {
+  const g = $("pgrid"); g.innerHTML = "";
+  CLASSES.forEach(c => {
+    const row = document.createElement("div"); row.className = "prow";
+    const sel = document.createElement("select"); sel.dataset.cls = c;
+    LEVELS.forEach(l => { const o = document.createElement("option"); o.value = l; o.textContent = l; sel.appendChild(o); });
+    sel.value = policy[c] || "hide_use"; sel.className = sel.value;
+    sel.onchange = () => { sel.className = sel.value; renderPolicySummary(); };
+    row.innerHTML = `<code>${c}</code>`; row.appendChild(sel); g.appendChild(row);
+  });
+  renderPolicySummary();
+}
+function setPolicy(policy) {
+  document.querySelectorAll("#pgrid select").forEach(s => { s.value = policy[s.dataset.cls] || "hide_use"; s.className = s.value; });
+  renderPolicySummary();
+}
+function readPolicy() {
+  const p = {}; document.querySelectorAll("#pgrid select").forEach(s => p[s.dataset.cls] = s.value); return p;
+}
+function renderPolicySummary() {
+  const n = {hide_use:0, approval:0, blocked:0};
+  Object.values(readPolicy()).forEach(l => n[l]++);
+  $("pol-sum").innerHTML = `<span class="c-ok">${n.hide_use} hide_use</span> · <span class="c-warn">${n.approval} approval</span> · <span class="c-bad">${n.blocked} blocked</span>`;
+}
+
+async function startRun() {
+  const body = {
+    url: $("url").value.trim(), task: $("task").value.trim(), policy: readPolicy(),
+    max_steps: parseInt($("max").value, 10) || 15, plva_enabled: $("plva").checked,
+  };
+  const model = $("model").value.trim(); if (model) body.model = model;
+  if (!body.url) return toast("URL is required", true);
+  if (!body.task) return toast("task is required", true);
+  $("btn-run").disabled = true;
+  try {
+    const r = await fetch("/api/run", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body)});
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { toast(d.error || ("HTTP " + r.status), true); $("btn-run").disabled = false; return; }
+    selected = null; lastCloudSrc = lastLocalSrc = ""; version = -1; poll();
+  } catch (e) { toast("could not reach the UI server", true); $("btn-run").disabled = false; }
+}
+async function stopRun() {
+  try {
+    const r = await fetch("/api/stop", {method:"POST"});
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) toast(d.error || ("HTTP " + r.status), true); else toast("stop requested");
+    version = -1; poll();
+  } catch (e) { toast("could not reach the UI server", true); }
+}
+
+/* ---------------- polling ---------------- */
+async function poll() {
+  const reveal = $("reveal-vault").checked ? 1 : 0;
+  try {
+    const r = await fetch(`/api/state?since=${version}&reveal=${reveal}&images=1`, {cache:"no-store"});
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const d = await r.json();
+    setConn(true);
+    if (d.unchanged) return;
+    version = d.version; view = d; render();
+  } catch (e) { setConn(false); }
+}
+function setConn(ok) { const c = $("conn"); c.textContent = ok ? "ui live" : "ui offline"; c.className = "pill " + (ok ? "ok" : "bad"); }
+
+/* ---------------- rendering ---------------- */
+function render() {
+  if (!view) return;
+  renderTop(view); renderFrames(view); renderTimeline(view);
+  renderVault(view); renderApprovals(view); renderReviews(view); renderComputes(view); renderSummary(view);
+}
+
+function renderTop(d) {
+  const st = d.status || "idle";
+  const cls = {idle:"", running:"acc running", done:"ok", halted:"warn", failed:"bad"}[st] || "";
+  $("status").className = "pill " + cls; $("status-t").textContent = st;
+  const running = st === "running";
+  $("btn-run").disabled = running; $("btn-stop").disabled = !running;
+  ["url","task","max","model","plva"].forEach(id => $(id).disabled = running);
+  document.querySelectorAll("#pgrid select").forEach(s => s.disabled = running);
+  $("stepc").innerHTML = `step <b>${d.steps.length}</b> / ${d.config?.max_steps ?? "–"}`;
+  $("model-t").textContent = d.config?.model || "default";
+  const rd = d.readiness || {};
+  const has = Object.keys(rd).length > 0;
+  setPill("rd-mode", "mode: " + (has ? (rd.mode ?? "?") : "–"), !has ? "" : rd.mode === "local" ? "ok" : "warn");
+  setPill("rd-ready", "ready: " + (has ? String(rd.ready_for_private_values) : "–"), !has ? "" : rd.ready_for_private_values ? "ok" : "bad");
+  setPill("rd-iso", "isolation: " + (has ? (rd.isolation ?? "?") : "–"), !has ? "" : rd.isolation === "verified" ? "ok" : rd.isolation === "failed" ? "bad" : "warn");
+  $("outc").innerHTML = `outbound <b>${d.outbound_requests ?? 0}</b>`;
+  const leaks = d.leaks_found ?? 0;
+  $("leakc").innerHTML = `leaks found: <b>${leaks}</b>`; $("leakc").className = "count" + (leaks > 0 ? " bad" : "");
+  if (d.config && running) {
+    // while a run is in flight the master switch mirrors that run's configuration
+    if ($("plva").checked !== !!d.config.plva_enabled) { $("plva").checked = !!d.config.plva_enabled; renderMaster(); }
+  }
+}
+function setPill(id, text, cls) { const el = $(id); el.textContent = text; el.className = "pill " + (cls || ""); }
+
+function currentStep(d) {
+  if (!d.steps.length) return null;
+  if (selected != null) { const s = d.steps.find(x => x.step === selected); if (s) return s; }
+  return d.steps[d.steps.length - 1];
+}
+
+function renderFrames(d) {
+  const s = currentStep(d);
+  const follow = selected == null;
+  $("follow").hidden = follow;
+  $("frame-which").textContent = s ? (follow ? `step ${s.step} (latest)` : `step ${s.step} selected`) : "no frames yet";
+  const plvaOff = d.config && d.config.plva_enabled === false;
+  const ct = $("cloud-tag");
+  ct.textContent = plvaOff ? "what the cloud model saw · UNREDACTED" : "what the cloud model saw";
+  ct.className = "tag " + (plvaOff ? "bad" : "ok");
+
+  const cimg = $("cloud-img"), limg = $("local-img");
+  const csrc = s && s.redacted_png ? "data:image/png;base64," + s.redacted_png : "";
+  const lsrc = s && s.raw_png ? "data:image/png;base64," + s.raw_png : "";
+  if (csrc !== lastCloudSrc) { lastCloudSrc = csrc; if (csrc) cimg.src = csrc; else cimg.removeAttribute("src"); }
+  if (lsrc !== lastLocalSrc) { lastLocalSrc = lsrc; if (lsrc) limg.src = lsrc; else limg.removeAttribute("src"); }
+  cimg.hidden = !csrc; $("cloud-empty").hidden = !!csrc;
+  limg.hidden = !lsrc; $("local-empty").hidden = !!lsrc;
+  const revealLocal = $("reveal-local").checked;
+  limg.classList.toggle("blur", !revealLocal);
+  $("local-veil").classList.toggle("hide", revealLocal || !lsrc);
+
+  const m = $("cloud-metrics"); m.innerHTML = "";
+  if (s) {
+    const items = [
+      ["masks", s.mask_count ?? 0],
+      ["sha256", s.frame_sha256 ? s.frame_sha256.slice(0, 12) + "…" : "–"],
+      ["bytes", kb(s.outbound_bytes)],
+      ["redact", ms(s.redact_ms)],
+      ["model", ms(s.model_ms)],
+    ];
+    items.forEach(([k, v]) => { const e = document.createElement("span"); e.className = "metric"; e.innerHTML = `${k} <b>${esc(v)}</b>`; m.appendChild(e); });
+    $("local-metrics").textContent = s.url ? s.url : "";
+  } else {
+    $("local-metrics").textContent = "";
+  }
+}
+
+function compactAction(a) {
+  if (!a || typeof a !== "object") return "";
+  const o = {};
+  for (const [k, v] of Object.entries(a)) {
+    if (k === "reasoning") continue;
+    if (v == null || v === "" || (Array.isArray(v) && !v.length)) continue;
+    o[k] = v;
+  }
+  return JSON.stringify(o);
+}
+
+function renderTimeline(d) {
+  const box = $("steps");
+  if (!d.steps.length) { box.innerHTML = `<div class="hint" style="padding:8px 0">No steps yet.</div>`; return; }
+  const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+  const cur = currentStep(d);
+  box.innerHTML = d.steps.map(s => {
+    const evs = (s.events || []).map(e => {
+      const kind = e.kind || "";
+      const c = EV_CLASS[kind] || (kind.startsWith("approval_") ? "warn" : "dim");
+      if (kind === "halt") return `<li class="halt">HALT<small>${tokenize(e.detail || e.error_code || "")}</small></li>`;
+      const bits = [];
+      if (e.token) bits.push(`<code>${esc(e.token)}</code>`);
+      if (e.pii_class) bits.push(esc(e.pii_class));
+      if (e.tool_name) bits.push(esc(e.tool_name));
+      if (e.error_code) bits.push(`<span class="c-bad">${esc(e.error_code)}</span>`);
+      if (e.detail) bits.push(tokenize(e.detail));
+      return `<li class="ev ${c}"><span class="k">${esc(kind)}</span><span class="d">${bits.join(" · ")}</span></li>`;
+    }).join("");
+    const action = compactAction(s.action);
+    const lat = [s.model_ms != null && s.model_ms > 0 ? "model " + ms(s.model_ms) : null,
+                 s.redact_ms != null && s.redact_ms > 0 ? "redact " + ms(s.redact_ms) : null,
+                 s.mask_count != null ? s.mask_count + " masks" : null].filter(Boolean).join(" · ");
+    return `<div class="step${cur && cur.step === s.step ? " sel" : ""}" data-step="${s.step}">
+      <div class="head"><span class="n">step ${s.step}</span><span class="url" title="${esc(s.url)}">${esc(s.url)}</span><span class="lat">${esc(lat)}</span></div>
+      <div class="reason">${tokenize(s.reasoning || (s.action && s.action.reasoning) || "")}</div>
+      ${action ? `<pre>${tokenize(action)}</pre>` : ""}
+      ${evs ? `<ul class="evs">${evs}</ul>` : ""}
+    </div>`;
+  }).join("");
+  box.querySelectorAll(".step").forEach(el => el.onclick = () => {
+    const n = parseInt(el.dataset.step, 10);
+    selected = (selected === n) ? null : n; render();
+  });
+  if (atBottom && selected == null) box.scrollTop = box.scrollHeight;
+}
+
+function emptyRow(cols, text) { return `<tr class="empty-row"><td colspan="${cols}">${text}</td></tr>`; }
+
+function renderVault(d) {
+  const reveal = $("reveal-vault").checked;
+  const rows = Object.entries(d.vault || {});
+  const tb = $("vault").tBodies[0];
+  if (!rows.length) { tb.innerHTML = emptyRow(5, "vault is empty"); return; }
+  tb.innerHTML = rows.map(([tok, v]) => {
+    let val;
+    if (!v.stored) val = `<span class="never">never stored</span>`;
+    else if (reveal && v.value != null) val = `<span class="secret show">${esc(v.value)}</span>`;
+    else val = `<span class="secret">••••••••••</span>`;
+    return `<tr><td class="mono">${esc(tok)}</td><td>${esc(v.class)}</td><td><span class="lv ${esc(v.level)}">${esc(v.level)}</span></td><td class="num">${v.resolved ?? 0}</td><td>${val}</td></tr>`;
+  }).join("");
+}
+
+function renderApprovals(d) {
+  const tb = $("approvals").tBodies[0];
+  if (!d.approvals.length) { tb.innerHTML = emptyRow(7, "no approvals requested"); return; }
+  tb.innerHTML = d.approvals.map(a => {
+    const dc = a.decision === "approve" ? "c-ok" : a.decision === "deny" ? "c-bad" : "c-warn";
+    const scope = a.scope ? `ttl ${a.scope.ttl_seconds ?? "?"}s · ×${a.scope.max_uses ?? "?"}` : "–";
+    return `<tr><td class="num">${a.step}</td><td class="mono">${esc(a.token)}</td><td>${esc(a.pii_class)}</td><td class="${dc}">${esc(a.decision)}</td><td class="mono">${esc(a.reason_code)}</td><td class="mono">${esc(scope)}</td><td class="num">${Math.round(a.latency_ms ?? 0)}</td></tr>`;
+  }).join("");
+}
+
+function renderReviews(d) {
+  const tb = $("reviews").tBodies[0];
+  if (!d.reviews.length) { tb.innerHTML = emptyRow(4, "no trace reviews yet"); return; }
+  tb.innerHTML = d.reviews.map(r => {
+    const c = r.action === "continue" ? "c-ok" : r.action === "warn" ? "c-warn" : "c-bad";
+    return `<tr><td class="num">${esc(r.step)}</td><td class="${c}">${esc(r.action)}</td><td class="mono">${esc(r.reason_code)}</td><td class="num">${r.latency_ms != null ? Math.round(r.latency_ms) : "–"}</td></tr>`;
+  }).join("");
+}
+
+function renderComputes(d) {
+  const tb = $("computes").tBodies[0];
+  if (!d.computes.length) { tb.innerHTML = emptyRow(4, "no private computes yet"); return; }
+  tb.innerHTML = d.computes.map(c => {
+    const cls = c.status === "ok" ? "c-ok" : "c-bad";
+    const toks = Array.isArray(c.tokens) ? c.tokens.map(t => `<code>${esc(t)}</code>`).join(" ") : "";
+    return `<tr><td class="num">${esc(c.step)}</td><td>${esc(c.operation)}</td><td class="${cls}">${esc(c.status)}${c.reason_code ? ` <span class="c-dim mono">${esc(c.reason_code)}</span>` : ""}</td><td>${toks}</td></tr>`;
+  }).join("");
+}
+
+function renderSummary(d) {
+  const box = $("summary");
+  const final = ["done","halted","failed"].includes(d.status);
+  box.className = "card summary" + (final ? " show " + d.status : "");
+  if (!final) return;
+  const pill = $("sum-status"); pill.textContent = d.status;
+  pill.className = "pill " + ({done:"ok", halted:"warn", failed:"bad"}[d.status]);
+  $("sum-text").textContent = d.summary || (d.status === "done" ? "Task completed." : d.status === "halted" ? "Run halted." : "Run failed.");
+  const dur = d.started_at && d.finished_at ? (d.finished_at - d.started_at).toFixed(1) + " s" : "–";
+  const leaks = d.leaks_found ?? 0;
+  const kv = [
+    ["steps", d.steps.length], ["duration", dur], ["outbound", d.outbound_requests ?? 0],
+    ["leaks", leaks], ["vault tokens", Object.keys(d.vault || {}).length], ["approvals", d.approvals.length],
+  ];
+  $("sum-kv").innerHTML = kv.map(([k, v]) => `<div><b class="${k === "leaks" ? (leaks > 0 ? "c-bad" : "c-ok") : ""}">${esc(v)}</b><span>${k}</span></div>`).join("");
+}
+
+/* ---------------- boot ---------------- */
+async function boot() {
+  initRunPanel();
+  try {
+    const r = await fetch("/api/policy", {cache:"no-store"});
+    defaultPolicy = await r.json();
+  } catch (e) { defaultPolicy = Object.fromEntries(CLASSES.map(c => [c, "hide_use"])); }
+  buildPolicyGrid(defaultPolicy);
+  await poll();
+  setInterval(poll, POLL_MS);
+}
+boot();
+</script>
+</body>
+</html>
