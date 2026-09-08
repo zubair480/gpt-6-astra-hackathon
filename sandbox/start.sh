@@ -73,7 +73,7 @@ if [ -z "$BACKEND" ]; then
 fi
 
 mkdir -p "$RUNTIME_DIR"; chmod 700 "$RUNTIME_DIR"
-RUNTIME_DIR="$(cd "$RUNTIME_DIR" && pwd)"
+RUNTIME_DIR="$(cd "$RUNTIME_DIR" && pwd -P)"  # real path: sandbox-exec matches /private/var, not /var
 DENY_EVIDENCE="$RUNTIME_DIR/deny-check.json"
 NEG_EVIDENCE="$RUNTIME_DIR/negative-control.json"
 ISO_EVIDENCE="$RUNTIME_DIR/isolation-evidence.json"
