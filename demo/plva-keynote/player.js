@@ -25,8 +25,8 @@
     $('next').textContent=playing?(mode==='step'?beats[targetBeat].running:'Playing…'):
       mode?'Continue →':finished?'Complete':nextBeat?`${atStop||index===0?nextBeat.label:'Continue'} →`:'Complete';
     $('play').textContent=playing?'Pause':mode?'Resume':'Play 60s';
-    $('chapter').textContent=index===0?'Ready · Four clicks to present':
-      `${beatIndex+1} / 4 · ${atStop&&!playing?beat.ready:data[index].title}`;
+    $('chapter').textContent=index===0?'Ready to present':
+      `${atStop&&!playing?beat.ready:data[index].title}`;
   }
   function updateClock(){ $('time').textContent=`${clock(elapsed)} / 01:00`;$('progress').style.width=`${elapsed/total*100}%`; }
   function render(animate=true){
