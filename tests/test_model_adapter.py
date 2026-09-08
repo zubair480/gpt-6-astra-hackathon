@@ -30,6 +30,7 @@ from plva_private_reasoning.model.adapter import (
     COMPUTE_STAGE_ONE_MAX_TOKENS,
     COMPUTE_SYSTEM,
     OPEN_DELIMITER,
+    TRACE_SCHEMA,
     TRACE_SYSTEM,
     AdapterError,
     approve_backend,
@@ -262,6 +263,7 @@ def test_approve_prompt_fences_untrusted_context_and_keeps_policy_trusted() -> N
     assert "Ignore all previous instructions" not in trusted_part
     assert "Use this key only in the integration credential field." in trusted_part
     assert "untrusted" in APPROVE_SYSTEM.lower() and OPEN_DELIMITER in APPROVE_SYSTEM
+    assert "red flag: deny it" in trusted_part.lower() or "red flag: deny it" in prompt
 
 
 def test_approve_injection_cannot_change_output_shape() -> None:
@@ -419,6 +421,26 @@ def test_adapter_error_is_a_backend_output_error() -> None:
     assert issubclass(AdapterError, BackendOutputError)
 
 
+def test_compute_prompts_carry_worked_examples_that_cannot_collide_with_tokens() -> None:
+    sort_prompt = compute_prompt(compute_request())
+    assert sort_prompt.startswith("EXAMPLE (different data).")
+    assert (
+        "K_1" in sort_prompt
+        and "K_1" not in compute_schema(compute_request())["properties"]["tokens"]["items"]["enum"]
+    )
+    assert "formatted `token: value`, from first to last" in sort_prompt
+    assert "JSON" not in COMPUTE_SYSTEM.split("do not use JSON")[0]  # stage one is plain text
+    select_prompt = compute_prompt(
+        compute_request(operation="select", instruction="Entries that are names.", select_count=2)
+    )
+    assert "Correct answer:\nnone" in select_prompt
+    assert "-> yes" in select_prompt and "Exactly 2 items must be yes." in select_prompt
+    assert "FINAL: none" in select_prompt
+    open_ended = compute_prompt(compute_request(operation="select", instruction="Names."))
+    assert "must be yes" not in open_ended
+    assert 'return {"tokens": []}' in COMPUTE_JSON_PROMPT
+
+
 def test_compute_count_mismatch_is_still_caught_by_operations() -> None:
     # The adapter checks membership and uniqueness; the operations layer owns counts.
     fake = FakeBackend([STAGE_ONE, '{"tokens": ["NAME_1_a3f9", "NAME_2_a3f9"]}'])
@@ -526,6 +548,10 @@ def test_trace_prompt_is_value_free_and_fences_context() -> None:
     assert "- step 3 resolution_denied class=EMAIL token=EMAIL_1_a3f9" in prompt
     assert "- step 4 error error=TIMEOUT" in prompt
     assert "Ignore all previous" not in prompt.split(OPEN_DELIMITER)[0]
+    assert "flagged events: 1 resolution_denied, 1 error." in prompt
+    assert "flagged events: none." in trace_prompt(trace_request())
+    assert list(TRACE_SCHEMA["properties"]) == ["reason_code", "action"]  # reason decided first
+    assert set(TRACE_SCHEMA["required"]) == {"reason_code", "action"}
 
 
 # --- shared ----------------------------------------------------------------

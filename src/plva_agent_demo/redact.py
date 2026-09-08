@@ -27,7 +27,9 @@ BLOCKED_LITERAL: Final = "«BLOCKED»"
 
 # --- regexes -----------------------------------------------------------------------------------
 
-_EMAIL_RE = re.compile(r"(?<![A-Za-z0-9._%+-])[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}(?![A-Za-z0-9-])")
+_EMAIL_RE = re.compile(
+    r"(?<![A-Za-z0-9._%+-])[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}(?![A-Za-z0-9-])"
+)
 _PHONE_RE = re.compile(
     r"(?<![\w.])(?:\+\d{1,3}[\s.-]?)?(?:\(\d{2,4}\)[\s.-]?|\d{2,4}[\s.-]?)?\d{3,4}[\s.-]?\d{3,4}(?![\w-])"
 )
@@ -35,8 +37,11 @@ _CARD_RE = re.compile(r"(?<![\dA-Za-z])(?:\d[ -]?){12,18}\d(?![\dA-Za-z])")
 _SSN_RE = re.compile(r"(?<![\d-])\d{3}-\d{2}-\d{4}(?![\d-])")
 _IBAN_RE = re.compile(r"(?<![A-Z0-9])[A-Z]{2}\d{2}(?: ?[A-Z0-9]){11,30}(?![A-Z0-9])")
 _CVC_INLINE_RE = re.compile(r"(?i)\bCV[CV]2?\s*[:#=]?\s*(\d{3,4})(?!\d)")
+_CVC_WORD_RE = re.compile(r"(?i)\bCV[CV]2?\b")
 _CVC_LOOSE_RE = re.compile(r"(?<![\d./-])\d{3,4}(?![\d./-])")
-_DOB_RE = re.compile(r"(?<![\d/-])(?:\d{4}-\d{2}-\d{2}|\d{1,2}/\d{1,2}/\d{4}|\d{1,2}\.\d{1,2}\.\d{4})(?![\d/-])")
+_DOB_RE = re.compile(
+    r"(?<![\d/-])(?:\d{4}-\d{2}-\d{2}|\d{1,2}/\d{1,2}/\d{4}|\d{1,2}\.\d{1,2}\.\d{4})(?![\d/-])"
+)
 _DOB_CONTEXT_RE = re.compile(r"(?i)birth|\bdob\b|\bborn\b")
 _STREET_SUFFIX = (
     "Terrace|Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Lane|Ln|Drive|Dr|Court|Ct|Way|Place|Pl|"
@@ -157,7 +162,9 @@ class _Detector:
     def _free(self, idx: int, start: int, end: int) -> bool:
         return all(end <= s or start >= e for s, e in self.claimed.get(idx, []))
 
-    def _add(self, pii_class: str, idx: int, start: int, end: int, value: str | None = None) -> None:
+    def _add(
+        self, pii_class: str, idx: int, start: int, end: int, value: str | None = None
+    ) -> None:
         if start >= end or not self._free(idx, start, end):
             return
         v = value if value is not None else self.spans[idx].text[start:end]
@@ -277,7 +284,9 @@ class _Detector:
             )
         if "AUTH_TOKEN" in want:
             self._scan(
-                "AUTH_TOKEN", _GENERIC_TOKEN_RE, only=self._spans_with_context(_TOKEN_LABEL_RE, True)
+                "AUTH_TOKEN",
+                _GENERIC_TOKEN_RE,
+                only=self._spans_with_context(_TOKEN_LABEL_RE, True),
             )
         if "NAME" in want:
             self._detect_names()
@@ -293,7 +302,7 @@ class _Detector:
                     self._add("CVC", idx, m.start(1), m.end(1))
                 continue
             ctx = self._row_text(idx, strict=False)
-            if re.search(r"(?i)\bCV[CV]2?\b", ctx) and not re.search(r"(?i)\bCV[CV]2?\b", span.text):
+            if _CVC_WORD_RE.search(ctx) and not _CVC_WORD_RE.search(span.text):
                 for m in _CVC_LOOSE_RE.finditer(span.text):
                     self._add("CVC", idx, m.start(), m.end())
 
@@ -406,20 +415,22 @@ def _expanded(box: Box, width: int, height: int) -> tuple[int, int, int, int]:
     return x0, y0, x1, y1
 
 
-def _fit_text(draw: ImageDraw.ImageDraw, text: str, max_w: int, max_h: int) -> tuple[str, int] | None:
+def _fit_text(
+    draw: ImageDraw.ImageDraw, text: str, max_w: int, max_h: int
+) -> tuple[str, int] | None:
     size = max(8, min(14, max_h - 4))
     while size >= 8:
         font = _font(size)
-        l, t, r, b = draw.textbbox((0, 0), text, font=font)
-        if r - l <= max_w and b - t <= max_h:
+        bl, t, r, b = draw.textbbox((0, 0), text, font=font)
+        if r - bl <= max_w and b - t <= max_h:
             return text, size
         size -= 1
     font = _font(8)
     clipped = text
     while len(clipped) > 1:
         clipped = clipped[:-1]
-        l, t, r, b = draw.textbbox((0, 0), clipped + "…", font=font)
-        if r - l <= max_w and b - t <= max_h:
+        bl, t, r, b = draw.textbbox((0, 0), clipped + "…", font=font)
+        if r - bl <= max_w and b - t <= max_h:
             return clipped + "…", 8
     return None
 
@@ -435,8 +446,8 @@ def _draw_chip(draw: ImageDraw.ImageDraw, rect: tuple[int, int, int, int], token
         return
     text, size = fitted
     font = _font(size)
-    l, t, r, b = draw.textbbox((0, 0), text, font=font)
-    tx = px0 + ((px1 - px0) - (r - l)) / 2 - l
+    bl, t, r, b = draw.textbbox((0, 0), text, font=font)
+    tx = px0 + ((px1 - px0) - (r - bl)) / 2 - bl
     ty = py0 + ((py1 - py0) - (b - t)) / 2 - t
     draw.text((tx, ty), text, font=font, fill=CHIP_TEXT)
 
@@ -446,12 +457,15 @@ def _draw_blocked(img: Image.Image, rect: tuple[int, int, int, int]) -> None:
     w, h = x1 - x0, y1 - y0
     if w <= 0 or h <= 0:
         return
-    tile = Image.new("RGB", (w, h), MASK_FILL)  # hatch on a tile so lines never leave the mask
-    tile_draw = ImageDraw.Draw(tile)
-    step = 7
-    for k in range(-h, w, step):
-        tile_draw.line((k, h, k + h, 0), fill=HATCH_FILL, width=1)
-    img.paste(tile, (x0, y0))
+    # Hatch on a tile inset by 1px so the lines never leave the mask and a solid border remains.
+    tw, th = w - 2, h - 2
+    if tw > 0 and th > 0:
+        tile = Image.new("RGB", (tw, th), MASK_FILL)
+        tile_draw = ImageDraw.Draw(tile)
+        step = 7
+        for k in range(-th, tw, step):
+            tile_draw.line((k, th, k + th, 0), fill=HATCH_FILL, width=1)
+        img.paste(tile, (x0 + 1, y0 + 1))
     draw = ImageDraw.Draw(img)
     if w < 24 or h < 8:
         return
@@ -460,11 +474,11 @@ def _draw_blocked(img: Image.Image, rect: tuple[int, int, int, int]) -> None:
         return
     text, size = fitted
     font = _font(size)
-    l, t, r, b = draw.textbbox((0, 0), text, font=font)
-    tw, th = r - l, b - t
-    tx = x0 + (w - tw) / 2 - l
-    ty = y0 + (h - th) / 2 - t
-    draw.rectangle((tx + l - 2, ty + t - 1, tx + r + 2, ty + b + 1), fill=MASK_FILL)
+    bl, t, r, b = draw.textbbox((0, 0), text, font=font)
+    text_w, text_h = r - bl, b - t
+    tx = x0 + (w - text_w) / 2 - bl
+    ty = y0 + (h - text_h) / 2 - t
+    draw.rectangle((tx + bl - 2, ty + t - 1, tx + r + 2, ty + b + 1), fill=MASK_FILL)
     draw.text((tx, ty), text, font=font, fill=BLOCKED_TEXT)
 
 
@@ -493,7 +507,7 @@ def paint(png: bytes, masks: list[Mask]) -> bytes:
 def redact(
     snapshot: Snapshot, vault: Vault, policy: dict[str, Level]
 ) -> tuple[RedactedFrame, list[Finding]]:
-    """Detect PII in the snapshot, issue tokens, paint masks. Returns the outbound frame + findings."""
+    """Detect PII in the snapshot, issue tokens, paint masks. Returns outbound frame + findings."""
     findings = detect(snapshot.spans, policy)
     masks: list[Mask] = []
     manifest: list[dict[str, str]] = []
@@ -519,7 +533,7 @@ def redact(
 
 
 def scrub_text(text: str, vault: Vault) -> tuple[str, int]:
-    """Replace every vault value in ``text`` with its token (blocked -> «BLOCKED»). Longest first."""
+    """Replace every vault value in ``text`` with its token (blocked: «BLOCKED»), longest first."""
     if not text:
         return text, 0
     hits = 0

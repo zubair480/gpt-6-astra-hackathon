@@ -5,6 +5,7 @@ The raw screenshot and span text returned here are LOCAL ONLY. This module never
 
 from __future__ import annotations
 
+import contextlib
 from types import TracebackType
 from typing import Any, Final, Self
 from urllib.parse import urlsplit
@@ -37,7 +38,8 @@ _EXTRACT_JS: Final = r"""
     const x0 = Math.max(0, r.left), y0 = Math.max(0, r.top);
     const x1 = Math.min(W, r.right), y1 = Math.min(H, r.bottom);
     if (x1 - x0 <= 0 || y1 - y0 <= 0) return null;
-    return { x: +x0.toFixed(2), y: +y0.toFixed(2), w: +(x1 - x0).toFixed(2), h: +(y1 - y0).toFixed(2) };
+    return { x: +x0.toFixed(2), y: +y0.toFixed(2),
+             w: +(x1 - x0).toFixed(2), h: +(y1 - y0).toFixed(2) };
   };
   const visible = (el) => {
     for (let e = el; e && e.nodeType === 1; e = e.parentElement) {
@@ -47,12 +49,15 @@ _EXTRACT_JS: Final = r"""
     }
     return true;
   };
-  const SKIP = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE', 'HEAD', 'TITLE', 'META', 'LINK']);
+  const SKIP = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE', 'HEAD', 'TITLE', 'META',
+                        'LINK']);
 
   // ---- fields -------------------------------------------------------------------------------
   const fieldEls = Array.from(document.querySelectorAll(
-    'input, textarea, select, [contenteditable=""], [contenteditable="true"], [contenteditable="plaintext-only"]'));
-  const NON_TEXT = new Set(['hidden', 'submit', 'button', 'reset', 'image', 'file', 'checkbox', 'radio', 'range', 'color']);
+    'input, textarea, select, [contenteditable=""], [contenteditable="true"], ' +
+    '[contenteditable="plaintext-only"]'));
+  const NON_TEXT = new Set(['hidden', 'submit', 'button', 'reset', 'image', 'file', 'checkbox',
+                            'radio', 'range', 'color']);
   const idOf = new Map();
   let auto = 0;
   const fields = [];
@@ -67,7 +72,8 @@ _EXTRACT_JS: Final = r"""
     if (aria && aria.trim()) return aria.trim();
     const by = el.getAttribute('aria-labelledby');
     if (by) {
-      const t = by.split(/\s+/).map(i => (document.getElementById(i) || {}).textContent || '').join(' ').trim();
+      const t = by.split(/\s+/)
+        .map(i => (document.getElementById(i) || {}).textContent || '').join(' ').trim();
       if (t) return t;
     }
     const ph = el.getAttribute('placeholder');
@@ -130,7 +136,10 @@ _EXTRACT_JS: Final = r"""
     for (let i = 0; i < text.length; i++) {
       cr.setStart(node, i); cr.setEnd(node, i + 1);
       const r = cr.getBoundingClientRect();
-      if (r.width === 0 && /\s/.test(text[i])) { if (lines.length) lines[lines.length - 1].chars.push(text[i]); continue; }
+      if (r.width === 0 && /\s/.test(text[i])) {
+        if (lines.length) lines[lines.length - 1].chars.push(text[i]);
+        continue;
+      }
       if (r.height === 0) continue;
       const mid = r.top + r.height / 2;
       let line = lines.length ? lines[lines.length - 1] : null;
@@ -149,7 +158,8 @@ _EXTRACT_JS: Final = r"""
       if (box) spans.push({ text: t, box });
     }
   }
-  // Input / textarea values as spans (password values included, on purpose: classified as PASSWORD).
+  // Input / textarea values as spans (password values included on purpose: they are
+  // classified as PASSWORD and blocked by the redactor).
   for (const el of fieldEls) {
     const tag = el.tagName.toLowerCase();
     if (tag !== 'input' && tag !== 'textarea') continue;
@@ -161,7 +171,8 @@ _EXTRACT_JS: Final = r"""
     const type = tag === 'input' ? (el.getAttribute('type') || 'text').toLowerCase() : 'textarea';
     spans.push({ text: norm(value), box, field_id: idOf.get(el), input_type: type });
   }
-  return { spans, fields, focused_field_id, title: document.title || '', url: location.href, width: W, height: H };
+  return { spans, fields, focused_field_id, title: document.title || '', url: location.href,
+           width: W, height: H };
 }
 """
 
@@ -212,16 +223,12 @@ class Browser:
 
     def close(self) -> None:
         for closer in (self._context, self._browser):
-            try:
-                if closer is not None:
+            if closer is not None:
+                with contextlib.suppress(Exception):  # best-effort teardown
                     closer.close()
-            except Exception:  # noqa: BLE001 - best-effort teardown
-                pass
         if self._pw is not None:
-            try:
+            with contextlib.suppress(Exception):
                 self._pw.stop()
-            except Exception:  # noqa: BLE001
-                pass
         self._pw = self._browser = self._context = self._page = None
 
     @property
@@ -240,10 +247,8 @@ class Browser:
         self.wait_settled()
 
     def wait_settled(self) -> None:
-        try:
+        with contextlib.suppress(PwTimeoutError):
             self.page.wait_for_load_state("networkidle", timeout=SETTLE_TIMEOUT_MS)
-        except PwTimeoutError:
-            pass
 
     # -- observation ----------------------------------------------------------------------------
 
@@ -299,12 +304,12 @@ class Browser:
         self._next_frames()
 
     def _next_frames(self) -> None:
-        """Wheel scrolling is applied asynchronously; wait two animation frames so layout settles."""
+        """Wheel scrolling is applied asynchronously; wait two animation frames to settle."""
         try:
             self.page.evaluate(
                 "() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))"
             )
-        except Exception:  # noqa: BLE001 - page may be navigating; snapshot() re-reads anyway
+        except Exception:
             self.page.wait_for_timeout(50)
 
 

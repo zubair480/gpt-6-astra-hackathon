@@ -225,7 +225,7 @@ class Runner:
 
         record = StepRecord(step=self.step)
         self.state.add_step(record)
-        snapshot: Snapshot = self.browser.snapshot()
+        snapshot = self._snapshot_with_retry()
         self.state.update_step(self.step, url=snapshot.url, raw_png=snapshot.png)
 
         t0 = time.perf_counter()
@@ -315,6 +315,18 @@ class Runner:
         if finished:
             return True
         return self._maybe_review()
+
+    def _snapshot_with_retry(self, attempts: int = 4) -> Snapshot:
+        """Pages navigate under us; a snapshot taken mid-navigation raises. Settle and retry."""
+        last: Exception | None = None
+        for _ in range(attempts):
+            try:
+                self.browser.wait_settled()
+                return self.browser.snapshot()
+            except Exception as exc:  # playwright raises plain Error subclasses
+                last = exc
+                time.sleep(0.6)
+        raise RunnerError("could not capture a stable snapshot") from last
 
     # -- cloud model ---------------------------------------------------------
     def _ask_model(self, user_text: str, png: bytes) -> Action:
