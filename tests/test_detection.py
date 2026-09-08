@@ -4,6 +4,9 @@ import json
 import os
 import unittest
 import uuid
+import tempfile
+from pathlib import Path
+from unittest.mock import patch
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -24,6 +27,17 @@ def render(lines, size=22, offset=(35, 30)):
 
 
 class DetectorTests(unittest.TestCase):
+    def test_missing_or_corrupt_models_fail_without_network(self):
+        from plva.detection import provision
+        with tempfile.TemporaryDirectory() as directory:
+            with patch.object(provision, "MODEL_DIR", Path(directory)):
+                with self.assertRaisesRegex(RuntimeError, "missing or invalid"):
+                    provision.model_paths()
+                for name, _, _ in provision.ASSETS:
+                    (Path(directory) / name).write_bytes(b"corrupt")
+                with self.assertRaisesRegex(RuntimeError, "missing or invalid"):
+                    provision.model_paths()
+
     def test_secret_reclassification_revokes_usable_aliases(self):
         session = PrivacySession()
         png = render([])

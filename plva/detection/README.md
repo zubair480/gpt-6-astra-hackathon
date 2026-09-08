@@ -13,13 +13,18 @@ On Windows x64 with Python 3.12:
 
 ```powershell
 python -m pip install rapidocr-onnxruntime==1.4.4
+python -m plva.detection.provision
 ```
 
-This package's wheel bundles all three ONNX models. The installation downloads
-dependencies; model construction and inference need no network connection, API
+The wheel supplies the detector and angle classifier. The explicit provisioning
+command downloads a pinned English recognizer and dictionary and verifies their
+SHA-256 hashes. Model construction and inference need no network connection, API
 key, NVIDIA driver, or GPU. The wrapper explicitly disables CUDA and DirectML;
 the measured runtime provider was `CPUExecutionProvider`. Models reside under
-`rapidocr_onnxruntime/models` inside the installed Python site-packages directory.
+`rapidocr_onnxruntime/models` inside the installed Python site-packages directory
+for detector/classifier; English assets reside in `~/.cache/plva/ocr`.
+Missing or invalid English assets fail construction instead of silently falling
+back to the bundled recognizer. The provision command is safe to rerun.
 No model files or screenshots need to be committed. Shared requirements are
 owned by the integration session and were not edited here.
 
@@ -47,15 +52,23 @@ Bundled assets verified on 2026-09-08:
 | `ch_PP-OCRv4_rec_infer.onnx` | 10857958 | `48fc40f24f6d2a207a2b1091d3437eb3cc3eb6b676dc3ef9c37384005483683b` |
 | `ch_ppocr_mobile_v2.0_cls_infer.onnx` | 585532 | `e47acedf663230f8863ff1ab0e64dd2d82b838fceb5957146dab185a89d6215c` |
 
-The inspected reference `plvas-v3/models.lock.json` and `src/ocr/rapidocr.js`
-describe portable PaddleOCR v4 models. The detector's SHA-256 is identical to the
-reference asset. The bundled recognizer is the larger Chinese/English model,
-not the reference's separate English recognizer. The reference's CoreML/Swift OCR
+Production additionally uses these assets from the inspected reference
+`plvas-v3/models.lock.json`, pinned to RapidOCR v3.9.1 on ModelScope:
+
+| Asset | SHA-256 |
+| --- | --- |
+| `en_PP-OCRv4_rec_mobile.onnx` (7653044 bytes) | `e8770c967605983d1570cdf5352041dfb68fa0c21664f49f47b155abd3e0e318` |
+| `en_dict.txt` | `5662df9d2d03f0e8ca0d3b0649d6acbab904b6a14b3d3521463c71c37c668ce3` |
+
+The full pinned URLs are in `provision.py`. The bundled Chinese/English
+recognizer above remains installed but is not selected. The detector's SHA-256
+is also identical to the reference. The reference's CoreML/Swift OCR
 is unsuitable for this Windows CPU implementation.
 
 ## Measured coverage and limits
 
-A fresh Pillow-rendered 1100 x 420 screenshot using 28 px Arial contained six
+Initial measurements below used the bundled recognizer before the English
+upgrade. A fresh Pillow-rendered 1100 x 420 screenshot using 28 px Arial contained six
 lines: a heading, full name, email, phone, shipping street/city/state/ZIP address,
 and a labelled API key. Actual ONNX inference recovered all six lines exactly,
 including the unseen synthetic values. Model startup took 0.625 seconds and one
@@ -101,3 +114,12 @@ normalizes whitespace, including separately recognized multiline fragments.
 These tests simulate scrolling and zoom in PNG fixtures; they are not live
 Amazon or other website acceptance. Integration/verification owns those tests.
 The session detector must be reused to preserve discovered-value matching.
+
+Independent acceptance followup: the unchanged Session 5 PNG suite initially
+passed 7/10 cases, with address, multiline address and phone failing exact-value
+assertions because the bundled recognizer dropped spaces. Independent diagnostics
+reported zero uncovered private glyph pixels in those three cases. The English
+model now passes all 10 unchanged tests (17.354s), including exact normalized
+values and all source glyph pixel coverage assertions. The oracle was copied
+read-only and was not committed or altered by Session 3. This improves observed
+transcription fidelity without implying perfect recognition on arbitrary pages.

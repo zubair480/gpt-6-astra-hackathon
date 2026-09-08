@@ -1,8 +1,9 @@
-"""Pixel-only OCR using the models bundled in rapidocr-onnxruntime 1.4.4.
+"""Pixel-only OCR using RapidOCR 1.4.4 and a verified English recognizer.
 
-Provision once with ``python -m pip install rapidocr-onnxruntime==1.4.4``.
-The wheel contains the PaddleOCR ONNX detector, recognizer and angle classifier;
-construction and inference do not fetch models or transmit screenshot content.
+Install ``rapidocr-onnxruntime==1.4.4`` then run
+``python -m plva.detection.provision`` once. The wheel supplies the detector and
+angle classifier; a pinned English model improves spacing in recognized values.
+Construction and inference do not fetch models or transmit screenshot content.
 No GPU, external OCR service, browser metadata or expected-value list is used.
 """
 
@@ -37,7 +38,11 @@ class LocalOCR:
                 "Local OCR is unavailable. Install rapidocr-onnxruntime==1.4.4 "
                 "with its bundled ONNX models before starting detection."
             ) from exc
+        from .provision import model_paths
+        recognizer, dictionary = model_paths()
         self._engine = RapidOCR(
+            rec_model_path=recognizer,
+            rec_keys_path=dictionary,
             text_score=text_score,
             intra_op_num_threads=threads,
             inter_op_num_threads=1,
