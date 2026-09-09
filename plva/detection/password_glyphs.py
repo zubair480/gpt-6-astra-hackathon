@@ -74,6 +74,14 @@ def find_password_glyphs(png: bytes, regions: list[dict]) -> list[dict]:
                 # prevent long dotted rules and broad runs spanning the page.
                 if len(run)>32 or run[-1][0]-run[0][0]>320:
                     continue
+                # Dot accents in recognized prose (e.g. repeated i's) are not
+                # missing password glyphs. Preserve OCR's own classification.
+                prose = [r for r in regions if not re.fullmatch(
+                    r"[•●·*▪\s]{3,}", r['text'])]
+                if any(r['x'] <= c[0]+c[2]/2 < r['x']+r['width']
+                       and r['y'] <= c[1]+c[3]/2 < r['y']+r['height']
+                       for r in prose for c in run):
+                    continue
                 left=max(0,run[0][0]-3);top=max(0,min(c[1] for c in run)-3)
                 right=min(width,max(c[0]+c[2] for c in run)+3)
                 bottom=min(height,max(c[1]+c[3] for c in run)+3)
