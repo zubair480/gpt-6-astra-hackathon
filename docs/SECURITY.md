@@ -6,22 +6,22 @@ documentation but never executed on this machine), and **blocked** (cannot be ex
 machine at all). Nothing in this document is a claim of enforcement unless a row in the
 "verified vs unverified" table says so.
 
-## 1. Status on the author's machine (macOS 26.4, Apple Silicon)
+## 1. Status on the author's machine (macOS 26.4, Apple Silicon M2, 8 GB)
 
 | Item | State | Evidence / reason |
 | --- | --- | --- |
-| OpenShell policy (`sandbox/policy.yaml`) | **UNTESTED** | Written against the published policy schema. Never applied to a live sandbox. |
-| OpenShell launcher (`sandbox/start.sh --backend openshell`) | **BLOCKED** | `openshell` CLI is not installed; neither Docker, Podman, Lima, Colima nor any other container runtime is present; installing system software and purchasing compute are out of scope for this track. OpenShell's own install path on macOS requires Docker Desktop. |
-| `sandbox-exec` dev fallback (`sandbox/macos-dev.sb`) | **TESTED** | Deny checks run under it: 6/6 probes `denied`, all failures immediate (EPERM / fast EAI_NONAME). Writes outside the runtime dir fail with EPERM. The mock service starts, binds loopback, writes its credential, and answers `/v1/readiness` from the host. |
-| Negative control (`deny_check.py --negative-control`, unsandboxed) | **TESTED** | 6/6 probes `succeeded` on this host (HTTPS 200, TCP connect, DNS resolved, UDP DNS reply, IP-literal HTTPS response, bogus proxy env honored -> ECONNREFUSED). |
-| Evidence pipeline (`deny_check.py` -> `verify_isolation.py` -> `isolation-evidence.json`) | **TESTED** | Unit tests over synthetic evidence plus an end-to-end launcher test with the mock service. |
-| Real local model inside a boundary | **BLOCKED** | Depends on the model track's `plva-pr-local` entry point and on a sandbox that can run it; neither exists on this machine yet. |
+| OpenShell policy (`sandbox/policy.yaml`) | **TESTED** | Accepted by `openshell sandbox create --policy` (openshell 0.0.116); Landlock applied with `rules_applied:10 skipped:0`; `/models` is a read-only filesystem, `/usr` write is `EPERM`, process runs as `sandbox` (uid 1000). |
+| OpenShell launcher (`sandbox/start.sh --backend openshell`) | **TESTED** | End to end on 2026-09-08: gateway (`sandbox/openshell-gateway.sh`) with the Docker driver on Colima, image `sandbox/Dockerfile` (432 MB), real `plva-pr-local` + Qwen3-1.7B-Q8_0 inside the sandbox, 6/6 probes `denied` inside, negative control 6/6 `succeeded` in a plain container, `isolation=verified`, service reports `ready_for_private_values: true`. 41 s wall clock. |
+| `sandbox-exec` dev fallback (`sandbox/macos-dev.sb`) | **TESTED** | Deny checks run under it: 6/6 probes `denied`, all failures immediate (EPERM / fast EAI_NONAME). Writes outside the runtime dir fail with EPERM. The mock service starts, binds loopback, writes its credential, and answers `/v1/readiness` from the host. Re-checked after the OpenShell work (mock, port 18577). |
+| Negative control (`deny_check.py --negative-control`) | **TESTED** | macOS host: 6/6 `succeeded`. Linux/aarch64 plain container from the same image (used by the openshell backend so the platform matches the boundary): 6/6 `succeeded`. |
+| Evidence pipeline (`deny_check.py` -> `verify_isolation.py` -> `isolation-evidence.json`) | **TESTED** | Unit tests over synthetic evidence, the macOS launcher test with the mock, and the OpenShell run above (evidence uploaded into the sandbox flips readiness). |
+| Real local model inside a boundary | **TESTED** | `plva-pr-local` is the sandbox's main process; model load about 25 s (CPU, 2 vCPU); `/v1/approve` 37-98 s per request (see section 11). |
 
 `sandbox-exec` is deprecated by Apple (still shipped and functional on macOS 26, but
 undocumented and unsupported). It confines one process tree with a Seatbelt profile; it does
 **not** create a network namespace, and it is **not equivalent** to OpenShell. It is provided
 only so the evidence pipeline and readiness gating can be exercised with synthetic values on
-a developer Mac.
+a developer Mac without Docker.
 
 ## 2. Platform findings: NVIDIA OpenShell / NemoClaw
 
@@ -33,28 +33,43 @@ Researched 2026-09-08 from the NVIDIA docs and GitHub (links at the end).
   traffic with a deny-by-default L7 proxy. NemoClaw is a reference stack layered on top of
   OpenShell (agent presets, managed inference, lifecycle); for this module only OpenShell's
   sandbox + policy layer is relevant.
-- **Install.** `curl -LsSf https://raw.githubusercontent.com/NVIDIA/OpenShell/main/install.sh | sh`
-  followed by a gateway start; a Docker (or Podman) daemon is required for the container
-  driver. The tutorial explicitly lists "Docker Desktop running" as a prerequisite.
-- **Platforms.** Linux, macOS on Apple Silicon (via Docker Desktop), Windows through WSL 2
-  (experimental). So OpenShell is *not* Linux-only, but on this Mac it is unavailable because
-  no container runtime is installed. The spec's preferred target, Linux x86_64 with the Docker
-  driver, is what `sandbox/policy.yaml` and the `openshell` branch of `start.sh` are written for.
-- **Policy model.** A policy file has static sections fixed at `openshell sandbox create`
-  (`filesystem_policy`, `landlock`, `process`) and dynamic sections hot-reloadable with
-  `openshell policy set <sandbox> --policy file --wait` (`network_policies`,
-  `network_middlewares`). Network policy is a map of named entries, each listing allowed
-  endpoints (host, port, protocol, HTTP method/path rules) and the binaries allowed to reach
-  them. **An empty map, `network_policies: {}`, denies every outbound connection.**
-- **Enforcement (documented).** Denied HTTPS CONNECTs are answered by the sandbox's proxy
-  with HTTP 403 (`curl: (56) Received HTTP code 403 from proxy after CONNECT`); L7 denials
-  return a 403 JSON body; the gateway logs `action=deny dst_host=... deny_reason='no matching
-  network policy'` (`openshell logs <sandbox> --since 5m`). The reference project established
-  empirically (on its own machine, not this one) that DNS resolution is blocked and that
-  `openshell policy prove` also passed a deliberately leaky negative control, so `prove` is not
-  evidence; only an in-sandbox deny test is.
-- **Inbound.** Host access to a service inside the sandbox goes through the gateway:
-  `openshell forward service <sandbox> --target-port 18555 --local 127.0.0.1:18555`.
+- **Install (as found here).** NVIDIA's installer put a Homebrew formula on the Mac:
+  `openshell` 0.0.116 and `openshell-gateway` 0.0.116 in `/opt/homebrew/bin`, mTLS material
+  in `/opt/homebrew/var/openshell/tls`, a launchd service `sh.brew.openshell`. That service
+  cannot start on a Colima Docker because launchd has no `DOCKER_HOST` (section 11).
+- **Docker driver, observed.** The gateway pulls `ghcr.io/nvidia/openshell/supervisor:0.0.116`,
+  extracts a static `openshell-sandbox` supervisor binary to `~/.local/share/openshell/` and
+  bind-mounts it into every sandbox container as the ENTRYPOINT (`/opt/openshell/bin/openshell-sandbox`).
+  The container runs as root with `SYS_ADMIN`, `NET_ADMIN`, `SYS_PTRACE`, `SYSLOG` on a dedicated
+  `openshell-docker` network; the supervisor then creates a *second*, private network namespace
+  (`10.200.0.2/24`, default route `10.200.0.1`) for the sandboxed process, installs nftables
+  REJECT rules and a policy DNS/proxy listener at `10.200.0.1:3128`, applies Landlock, drops to
+  the policy user, and execs the main command. Image requirements it enforces: an OCI `USER`
+  (or `process.run_as_user`), a workspace (`WORKDIR`) writable by that user, and trusted `ip`
+  and `nft` helpers in the image (`iproute2`, `nftables`), otherwise the container exits with a
+  clear error (section 11).
+- **Policy schema (real).** `openshell sandbox get <name> --policy-only` prints the effective
+  policy. Sections: `version: 1`, `filesystem_policy` (`include_workdir`, `read_only`,
+  `read_write`), `landlock.compatibility`, `process.run_as_user/run_as_group`, and the dynamic
+  `network_policies` map (`openshell policy set <sandbox> --policy file --wait`). `network_policies: {}`
+  denies everything; the gateway log line for a denied connection is
+  `NET:OPEN [MED] DENIED /usr/local/bin/python3.12(<pid>) -> example.com:443 [policy:- engine:opa] [reason:network connections not allowed by policy]`.
+- **Enforcement (observed inside, `deny_check.py --backend openshell`).** The supervisor injects
+  `HTTP_PROXY/HTTPS_PROXY/ALL_PROXY=http://10.200.0.1:3128`, `NO_PROXY=127.0.0.1,localhost,::1`
+  and CA-bundle variables. HTTPS via that proxy: `Tunnel connection failed: 403`. Direct TCP to
+  an IP: `ECONNREFUSED` in under 10 ms (nft reject with tcp-reset). UDP `sendto`: `EPERM`.
+  `getaddrinfo`: `EAI_AGAIN` in about 1 ms (`/etc/resolv.conf` points at `127.0.0.11`, which
+  has no listener inside the namespace). Loopback proxy on `:1`: `ECONNREFUSED`. Nothing times
+  out, so no probe is `inconclusive`. `openshell sandbox exec` runs under the same policy: each
+  exec re-applies Landlock (`rules_applied:10`), runs as `sandbox`, in the same netns.
+- **Mounts.** `openshell sandbox create` has no mount flag; the docker driver accepts
+  `--driver-config-json '{"docker":{"mounts":[{"type":"bind","source":"<abs host path>","target":"/models","read_only":true}]}}'`
+  only when the gateway config has `[openshell.drivers.docker] enable_bind_mounts = true`
+  (`sandbox/openshell-gateway.sh` writes that TOML and passes `--config`).
+- **Inbound.** `openshell forward service <sandbox> --target-port P --local 127.0.0.1:P` (gRPC
+  relay to the sandbox's loopback; "phase 1 accepts loopback only"). The relay presents the
+  host-side `Host:` header to the service, and the service's allowlist is built from its own
+  bind port, so the launcher uses the same port number (18575) inside and outside.
 
 ## 3. Trust boundary
 
@@ -109,9 +124,10 @@ Cannot (by construction, and in the boundary by policy):
   directory. Never logged, never in a URL, compared with `hmac.compare_digest`.
 - `sandbox-exec` backend: the runtime dir is the only writable path, so the credential file
   is where the host reads it; same user, no network involved.
-- OpenShell backend (untested): the credential is written to `/tmp/plva-pr/credential`
-  inside the sandbox and copied out with `openshell sandbox exec -- cat`, i.e. over the
-  gateway's exec channel, not over any network socket. `stop.sh` deletes both copies.
+- OpenShell backend (tested): the credential is written to `/tmp/plva-pr/credential` (0600,
+  owner `sandbox`) inside the sandbox and copied out with `openshell sandbox exec -- cat`, i.e.
+  over the gateway's mTLS gRPC exec channel, not over any sandbox network socket. `stop.sh`
+  deletes the host copy and the sandbox (default) or scrubs the in-sandbox copy (`--keep-sandbox`).
 - The main agent's execution environment must not be able to read the runtime dir; that is a
   host-configuration obligation of the core team (separate user or directory ACL).
 
@@ -140,9 +156,13 @@ Cannot (by construction, and in the boundary by policy):
 2. Read `instance_id` from `/v1/readiness` on the host.
 3. Run `sandbox/deny_check.py --backend <b> --instance-id <id> --policy <file>` **inside the
    same boundary**. It writes `deny-check.json`.
-4. Run `sandbox/deny_check.py --negative-control` on the host, unsandboxed, to prove the same
-   probes succeed when nothing restricts them (`negative-control.json`). `--skip-negative-control`
-   exists for offline hosts and is printed loudly because it lowers assurance.
+4. Run `sandbox/deny_check.py --negative-control` unsandboxed to prove the same probes succeed
+   when nothing restricts them (`negative-control.json`). macos-dev: on the host. openshell: in a
+   plain `docker run` container from the same image (no supervisor, default bridge network),
+   because `verify_isolation.py` requires the control to come from the same platform
+   (system + machine) as the boundary and the boundary is Linux/aarch64, not macOS.
+   `--skip-negative-control` exists for offline hosts and is printed loudly because it lowers
+   assurance.
 5. Run `sandbox/verify_isolation.py` on the host. It re-hashes the policy, re-fetches the
    `instance_id`, and writes `isolation-evidence.json`.
 6. If the result is not `verified`, the launcher stops the service (fail closed).
@@ -171,7 +191,7 @@ Cannot (by construction, and in the boundary by policy):
 Each backend has a *signature*: the way its enforcement mechanism makes a denied connection
 fail. Anything else is `inconclusive`, and one inconclusive probe makes the whole run fail.
 
-| Observation | sandbox-exec (tested) | OpenShell (documented, untested) | Negative control |
+| Observation | sandbox-exec (tested) | OpenShell (tested 2026-09-08) | Negative control |
 | --- | --- | --- | --- |
 | connect/sendto `EPERM` within 2 s | **denied** | denied | - |
 | `ENETUNREACH` / `EHOSTUNREACH` / `ECONNREFUSED` within 2 s | inconclusive (`UNEXPECTED_ERRNO`) | **denied** (private netns, no route) | - |
@@ -208,8 +228,9 @@ the evidence file and dropping to `failed`) belongs to the model track's `plva-p
 
 ## 8. Does the inbound port forward permit any unintended outbound route?
 
-**OpenShell.** No. The sandbox has a private network namespace; the forward is a gateway-side
-listener on host loopback that opens connections *into* the sandbox. A TCP connection is
+**OpenShell.** No (observed). The sandboxed process has a private network namespace whose only
+neighbour is the supervisor's proxy; the forward is a gRPC relay: a listener on host loopback
+that the supervisor connects *into* the sandbox's `127.0.0.1:18575`. A TCP connection is
 bidirectional, so the service can only send response bytes on connections the host opened;
 it cannot initiate anything toward the host or beyond, and there is no route from the sandbox
 namespace to the host's loopback interface. Host-side proxies listening on 127.0.0.1 are
@@ -240,10 +261,12 @@ sandbox/stop.sh  --backend macos-dev
 sandbox/start.sh --backend macos-dev                 # PLVA_PR_INNER_PORT=<port> if llama-server is a subprocess
 sandbox/stop.sh  --backend macos-dev
 
-# Linux x86_64 + OpenShell (UNTESTED; re-check flags against `openshell ... --help`)
-PLVA_PR_SANDBOX_IMAGE=<pre-provisioned image with /app and /models> sandbox/start.sh --backend openshell
-openshell logs plva-pr --since 5m | grep action=deny   # gateway-side corroboration
-sandbox/stop.sh --backend openshell [--delete]
+# OpenShell (TESTED on this Mac: openshell 0.0.116, Docker via Colima). First run builds the image.
+sandbox/openshell-gateway.sh start                   # gateway w/ docker driver + Colima socket, loopback :17670
+PLVA_PR_RUNTIME_DIR=$PWD/.plva-pr-openshell sandbox/start.sh --backend openshell   # host endpoint 127.0.0.1:18575
+openshell logs plva-pr --since 5m | grep DENIED      # gateway-side corroboration
+PLVA_PR_RUNTIME_DIR=$PWD/.plva-pr-openshell sandbox/stop.sh --backend openshell    # deletes the sandbox
+sandbox/openshell-gateway.sh stop
 
 # Pieces by hand
 uv run python sandbox/deny_check.py --negative-control --output negative-control.json
@@ -257,19 +280,44 @@ uv run python sandbox/verify_isolation.py --evidence .plva-pr/deny-check.json \
 
 ## 10. Known gaps
 
-- The OpenShell path is unexecuted. Its denial signature (403 on CONNECT, no-route errnos,
-  fast resolver failure) is taken from documentation and the reference runbook; the first real
-  run must confirm it, and `openshell logs ... action=deny` lines should be kept as
-  corroborating (sanitized) evidence.
-- UDP under OpenShell: if the sandbox namespace has a default route to the gateway that
-  silently drops non-proxied packets, `udp_dns_query` will time out and be `inconclusive`
-  rather than `denied`. That is the honest result; proving UDP denial there needs gateway log
-  correlation, which this tool does not automate.
-- The service must re-read `isolation-evidence.json` after `verify_isolation.py` writes it
-  (the evidence can only be produced after the service is running, because it is bound to
-  the running `instance_id`). That reload belongs to `plva-pr-local` (model track).
+- Inference inside the boundary is CPU-only (a Linux container on a 2-vCPU / 3 GiB Colima VM):
+  `/v1/approve` takes 37-98 s here. The macOS Metal path is only available outside the
+  OpenShell boundary (macos-dev fallback). A Linux host with a GPU (`--gpu`, CDI) or more
+  vCPUs is the production shape.
+- The negative control for the openshell backend runs in a plain container, not on the macOS
+  host. It proves the probes work on the container platform with no policy; it does not prove
+  anything about the Mac's own network.
+- `openshell policy prove` is not used and not evidence; only the in-sandbox deny test is.
+- UDP is fenced by nftables (`EPERM` on send), so `udp_dns_query` is a firm denial here; a
+  runtime that silently drops instead of rejecting would make it `inconclusive`, which is the
+  honest result.
 - `sandbox-exec` provides no memory or process-count limits and no protection against a
   privileged host process.
+
+## 11. OpenShell on this machine: blockers hit and how each was resolved
+
+Everything below is literal output from 2026-09-08 (openshell 0.0.116, Docker 29.x via Colima
+2 vCPU / 3 GiB, macOS 26.4, M2, 8 GB). No sudo was used; nothing was installed.
+
+| Blocker | Literal error | Command | Resolution |
+| --- | --- | --- | --- |
+| Homebrew gateway service does not start | `configuration error: no compute driver configured and auto-detection found no suitable installed driver; set --drivers <name> or OPENSHELL_DRIVERS=<name>` | `brew services start openshell` (launchd has no `DOCKER_HOST`) | `sandbox/openshell-gateway.sh start` runs the same binary with `OPENSHELL_DRIVERS=docker DOCKER_HOST=unix://$HOME/.colima/default/docker.sock`, loopback bind, `--config` TOML, log in `.plva-pr/openshell-gateway.log`. Stop the brew service first if it is retrying. |
+| No BuildKit on this Mac | `unknown flag: --progress` / `ERROR: BuildKit is enabled but the buildx component is missing or broken` | `docker build --progress=plain ...` / `DOCKER_BUILDKIT=1 docker build` (the `~/.docker/cli-plugins/*` symlinks point into an uninstalled Docker.app) | Legacy builder with a staged context (pyproject, README, LICENSE, src) so the 1.8 GB `models/` is not sent; `sandbox/Dockerfile.dockerignore` documents the intent for BuildKit users. `start.sh` builds this way when the image is missing (5 m 39 s cold, 16 s cached). |
+| Image without a user | `OCI USER is required because run_as_user is omitted` | `openshell sandbox create --from python:3.12-slim` | Dockerfile: `useradd sandbox` + `USER sandbox`; policy `process.run_as_user: sandbox`. |
+| Namespace helpers missing from a slim image | `Network namespace creation failed and proxy mode requires isolation. Ensure CAP_NET_ADMIN and CAP_SYS_ADMIN are available and iproute2 is installed. Error: trusted ip helper not found; checked /usr/sbin/ip, /sbin/ip, /usr/bin/ip, /bin/ip` (and, from the supervisor's strings, `trusted nft helper not found; policy DNS and transparent TCP require nftables`) | `openshell sandbox create --policy sandbox/policy.yaml` | Dockerfile installs `iproute2` and `nftables` in the runtime stage. |
+| Workspace not writable | `image workspace validation failed: workspace path component '/tmp/plva-pr' is not writable by the sandbox identity in the image: Permission denied (os error 13)` | same | Dockerfile: `install -d -o sandbox -g sandbox -m 700 /tmp/plva-pr` before `WORKDIR`. |
+| Bind mounts refused | `docker bind mounts require enable_bind_mounts = true in [openshell.drivers.docker]` | `openshell sandbox create --driver-config-json '{"docker":{"mounts":[...]}}'` | Gateway config TOML written by `openshell-gateway.sh`. Mount schema (from validation errors): `{"type":"bind","source","target","read_only","selinux_label"}`; other types `volume`, `tmpfs`, `image`. |
+| `sandbox exec` hangs | no output, never returns | `openshell sandbox exec -n X --no-tty -- id` from a script with stdin open | Redirect stdin: `</dev/null` (start.sh `sbx_exec`). |
+| `sandbox upload` treats DEST as a directory | `can't find '__main__' module in '/tmp/plva-pr/deny_check.py'` (a directory of that name was created) | `openshell sandbox upload X sandbox/deny_check.py /tmp/plva-pr/deny_check.py` | Upload to the directory `/tmp/plva-pr`. |
+| Service rejects the forward | `{"schema_version":"1.0","error_code":"FORBIDDEN_HOST"}` | `curl http://127.0.0.1:18576/health` with the service on 18555 inside | Same port inside and out (18575). Lead-owned: `plva-pr-local` also refuses `--host 0.0.0.0` (`refusing to bind a non-loopback address`), which is fine because the forward targets loopback. |
+| Negative control platform | `[verify-isolation] isolation=failed reasons=NEGATIVE_CONTROL_PLATFORM_MISMATCH` | host negative control (Darwin/arm64) vs sandbox evidence (Linux/aarch64) | Negative control runs in a plain container from the same image. |
+| macos-dev with a `/var/folders` runtime dir | `service did not answer /health` | `start.sh --backend macos-dev --runtime-dir "$(mktemp -d)"` | Pre-existing: Seatbelt matches real paths; `start.sh` now resolves the runtime dir with `pwd -P`. |
+
+Resource usage measured: image 432 MB; sandbox container 2.27 GiB resident (mostly page cache
+for the mmap'd 1.83 GB GGUF), VM `free -m`: 2898 total / 904 used / 1994 available; model load
+about 25 s from container start to first `/health`; full launcher 41 s; `/v1/approve` 61.6 s,
+37.1 s, 98.4 s (three requests, `contracts/v1/examples/approve-request.json`, HTTP 200,
+`decision: approve`).
 
 ## Sources
 
