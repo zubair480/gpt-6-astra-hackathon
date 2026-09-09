@@ -67,4 +67,3 @@ class safeEvidence,draftSkill,humanReview,saveSkill,freshInputs skill
 Skill drafting currently has a local deterministic path and an optional Astra adapter tested with mocked transport. Review approval does not prove execution success. Reuse requires fresh tokens, current policy and new outcome checks.
 
 No branches were merged. The diagram illustrates how the workstreams connect after integration; it is not a claim of a verified combined run. Test results above are branch-reported, not rerun for this diagram.
-
