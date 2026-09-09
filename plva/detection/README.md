@@ -175,3 +175,30 @@ successful task does not establish classifier precision. No classifier change
 or broad test run was made while the demo was being finalized. Any future guard
 against consuming the next field's label must retain legitimate separate-line
 label/value coverage and be validated against an unchanged pixel oracle.
+
+## Password label placement correction
+
+Secret-specific pairing now rejects narrow recovery/help phrases such as
+`Forgot password?` and `Password requirements` as inferred password values.
+Visible masked-glyph runs take priority over adjacent prose. Explicit
+`Password: actual-value` remains authoritative, including a real secret whose
+text happens to resemble a helper phrase. That provenance is retained in
+detector memory; previously inferred helper phrases are ignored on later pages
+without clearing legitimate discovered values. Secret tokens remain blocked.
+
+OCR can omit password dots or asterisks entirely. `password_glyphs.py` adds a
+local pixel-component fallback beside or below recognized Password/Passcode
+labels: at least three compact, filled, similarly shaped, aligned components
+with regular spacing. Both light and dark fields are supported. It masks only
+the observed component bounds with padding, never an inferred field rectangle.
+The repeated glyph string is a visible placeholder, not the underlying password.
+
+Initial scoped evidence: six secret-pairing tests passed, including an actual
+OCR fixture whose asterisks were omitted by OCR but fully covered by the fallback;
+the recovery link remained unmasked. Fourteen existing privacy/classification
+tests passed. Native-sized 4px dot runs at the reported layout coordinates were
+also localized in synthetic light and dark PNGs without OCR inference.
+Independent negative/pixel tests are required before integration. Thresholds are
+bounded to 2–14px components and runs of 3–32 glyphs; unusual glyphs, low contrast,
+missing labels or distant fields can still be missed. A decorative run visually
+identical to password dots remains ambiguous without additional field evidence.

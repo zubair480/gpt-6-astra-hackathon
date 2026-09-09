@@ -16,6 +16,17 @@ STREET = re.compile(r"\b\d{1,6}\s+[\w .'-]+\s(?:street|st|avenue|ave|road|rd|lan
 CITY_POSTAL = re.compile(r"(?:\b[A-Z]{2}\s+\d{5}(?:-\d{4})?\b|\b[A-Z]\d[A-Z]\s?\d[A-Z]\d\b|\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b)", re.I)
 GREETING = re.compile(r"^(?:hello|hi|welcome(?: back)?)[,!]?\s+([\w'’.-]+(?:\s+[\w'’.-]+){0,3})$", re.I)
 
+# Narrow UI phrases, not a dictionary of disallowed password words.
+SECRET_HELPER = re.compile(
+    r"^(?:(?:forgot|reset|change|show|hide|recover)\s+(?:your\s+)?password"
+    r"|password\s+(?:requirements?|strength|policy|help)"
+    r"|use\s+at\s+least\s+\d+\s+characters)[?.!:]*$", re.I)
+MASKED_SECRET = re.compile(r"^[•●·*▪\u25cf]{3,}$")
+
+
+def _secret_helper(text):
+    return bool(SECRET_HELPER.fullmatch(text.strip()))
+
 
 def _kind(label):
     label = label.lower()
@@ -75,6 +86,8 @@ def classify_regions(regions: list[dict], known_values: list[dict] | None = None
                 add(kind, match.group(), [row], "local-pattern")
         for known in known_values or []:
             value = known["value"]
+            if known["kind"] == "SECRET" and _secret_helper(value) and not known.get("explicit_secret"):
+                continue
             # Multiline address OCR often returns separate regions on later pages.
             fragments = [value] + [v.strip() for v in value.splitlines() if len(v.strip()) >= 4]
             # OCR inserts/removes spaces when the same text is zoomed or moved.
@@ -87,6 +100,10 @@ def classify_regions(regions: list[dict], known_values: list[dict] | None = None
         match = LABEL.match(text)
         if match:
             kind, value = _kind(match["label"]), match["value"]
+            explicit_secret = kind == "SECRET" and bool(re.match(
+                r"\s*[:：]", text[match.end("label"):]))
+            if kind == "SECRET" and not explicit_secret and _secret_helper(text):
+                continue
             selected = [row] if value else []
             following = below(row)
             if not value:
@@ -94,6 +111,12 @@ def classify_regions(regions: list[dict], known_values: list[dict] | None = None
                 right = [r for r in rows if r is not row and r["x"] >= row["x"] + row["width"]
                          and abs(r["y"] - row["y"]) <= max(row["height"], r["height"]) * .5
                          and r["x"] - row["x"] - row["width"] <= 240 and not LABEL.match(r["text"])]
+                if kind == "SECRET":
+                    right = [r for r in right if not _secret_helper(r["text"])]
+                    following = [r for r in following if not _secret_helper(r["text"])]
+                    masked = [r for r in right + following if MASKED_SECRET.fullmatch(r["text"].replace(" ", ""))]
+                    if masked:
+                        right, following = [masked[0]], []
                 if right:
                     selected = [min(right, key=lambda r: r["x"])]
                 elif following:
@@ -112,6 +135,10 @@ def classify_regions(regions: list[dict], known_values: list[dict] | None = None
                 add(kind, value, selected, "visible-label")
             elif selected:
                 add(kind, value, selected, "visible-label")
+                if explicit_secret:
+                    for finding in found:
+                        if finding['kind'] == 'SECRET' and finding['value'] == value.strip(' :：\t\n'):
+                            finding['explicit_secret'] = True
         if STREET.search(text):
             selected, value = [row], text
             for next_row in below(row, limit=2):
