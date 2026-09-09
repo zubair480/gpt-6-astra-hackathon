@@ -43,14 +43,15 @@ dev = [
 packages = ["src/plva_private_reasoning"]
 
 [tool.pytest.ini_options]
-addopts = "--strict-markers --strict-config -p no:cacheprovider --ignore=tests/browser_e2e --ignore-glob=tests/test_browser_*.py"
-testpaths = ["tests"]
+addopts = "--strict-markers --strict-config -p no:cacheprovider"
+# Only this module's suites; the main team's Windows app tests (tests/test_browser_*, etc.) use their own tooling.
+testpaths = ["tests/test_operations_*.py", "tests/test_contracts.py", "tests/test_service_*.py", "tests/test_client_*.py", "tests/test_model_*.py", "tests/test_sandbox_*.py", "tests/test_demo_*.py"]
 
 [tool.ruff]
 target-version = "py312"
 line-length = 100
 # The main team's Windows browser app (plva/, tests/test_browser_*) has its own tooling.
-extend-exclude = ["plva", "tests/browser_e2e", "tests/test_browser_*.py", "reference"]
+extend-exclude = ["plva", "reference", "tests/browser_e2e", "tests/test_browser_actions.py", "tests/test_browser_capture.py", "tests/test_browser_capture_diagnostics.py", "tests/test_browser_live.py", "tests/test_browser_persistent_capture.py", "tests/test_browser_session.py", "tests/test_browser_startup.py", "tests/test_detection.py", "tests/test_privacy.py", "tests/test_provider.py", "tests/test_runtime.py", "tests/test_web_observation.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "UP", "B", "SIM", "RUF"]
