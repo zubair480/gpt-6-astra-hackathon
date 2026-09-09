@@ -1,5 +1,7 @@
 # PLVA — hackathon demo
 
+The [working Cloudflare application](https://plva-app.zubairzafar480.workers.dev/) connects this Windows runtime to a private web workspace. See [web-app/README.md](web-app/README.md) for access, connector setup, and deployment. The [four-click presentation](https://plva-demo.zubairzafar480.workers.dev/) is a separate scripted walkthrough.
+
 Next implementation priority: [ordinary websites first, native desktop second](BROWSER-FIRST-MULTI-SESSION-PLAN.md).
 The app now opens ordinary websites in a dedicated, visible Edge browser on Windows.
 
