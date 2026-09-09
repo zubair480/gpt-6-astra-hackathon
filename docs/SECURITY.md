@@ -311,11 +311,31 @@ Everything below is literal output from 2026-09-08 (openshell 0.0.116, Docker 29
 | `sandbox upload` treats DEST as a directory | `can't find '__main__' module in '/tmp/plva-pr/deny_check.py'` (a directory of that name was created) | `openshell sandbox upload X sandbox/deny_check.py /tmp/plva-pr/deny_check.py` | Upload to the directory `/tmp/plva-pr`. |
 | Service rejects the forward | `{"schema_version":"1.0","error_code":"FORBIDDEN_HOST"}` | `curl http://127.0.0.1:18576/health` with the service on 18555 inside | Same port inside and out (18575). Lead-owned: `plva-pr-local` also refuses `--host 0.0.0.0` (`refusing to bind a non-loopback address`), which is fine because the forward targets loopback. |
 | Negative control platform | `[verify-isolation] isolation=failed reasons=NEGATIVE_CONTROL_PLATFORM_MISMATCH` | host negative control (Darwin/arm64) vs sandbox evidence (Linux/aarch64) | Negative control runs in a plain container from the same image. |
+| `sandbox upload` skips or fails | evidence upload: `ssh tar extract exited with status exit status: 2` (the runtime dir matches `.gitignore` `.plva-pr*/`, so the tar is empty); `--no-git-ignore`: the same `exit status: 2` even for a tracked file | `openshell sandbox upload [--no-git-ignore] plva-pr <file> /tmp/plva-pr` | Files are copied through the exec channel instead: `openshell sandbox exec -n plva-pr --no-tty -- sh -c 'cat > /tmp/plva-pr/<name>' < <file>` (`start.sh` `sbx_put`; sha256 verified equal inside). Same mTLS gRPC channel, same policy. |
 | macos-dev with a `/var/folders` runtime dir | `service did not answer /health` | `start.sh --backend macos-dev --runtime-dir "$(mktemp -d)"` | Pre-existing: Seatbelt matches real paths; `start.sh` now resolves the runtime dir with `pwd -P`. |
+
+Observed but not attributable to the boundary (for the service owner):
+
+- The service runs llama.cpp synchronously inside `async def` handlers, so `/health` and
+  `/v1/readiness` do not answer while an approve is being computed (28 s measured after one
+  client-aborted approve). Five client-aborted approves in a row: `/health` answered `503`
+  after 27.7 s (uvicorn `limit_concurrency=4`), then `/v1/readiness` 200 in 21 ms and
+  `/health` 200 in 4 ms, so aborted requests do not wedge it.
+- Once, after three clean approves (61.6 / 37.1 / 98.4 s) while a second container and the
+  macos-dev test were also running on the 3 GiB VM (the sandbox's resident set fell from
+  2.27 GiB to 687 MiB, i.e. the mmap'd weights were evicted), the service stopped accepting
+  connections for good: `py-spy dump` showed `MainThread` idle in `selectors.select`, no CPU
+  use, 7 connections waiting in the listen backlog (`/proc/net/tcp` rx_queue), one accepted
+  socket in `CLOSE_WAIT`, llama threads idle. Not reproduced on a fresh launch. Keep the VM
+  to one sandbox at a time, or give Colima more memory.
+- `docker exec` as root in the sandbox *container* (the supervisor's namespace, outside the
+  policy) has egress through the `openshell-docker` bridge (it downloaded a wheel). That
+  context belongs to the driver/operator side of the boundary, not to the sandboxed process
+  tree; it is how the supervisor talks to the gateway. Do not run workloads there.
 
 Resource usage measured: image 432 MB; sandbox container 2.27 GiB resident (mostly page cache
 for the mmap'd 1.83 GB GGUF), VM `free -m`: 2898 total / 904 used / 1994 available; model load
-about 25 s from container start to first `/health`; full launcher 41 s; `/v1/approve` 61.6 s,
+about 25 s from container start to first `/health`; full launcher 41 s cold, 26 s with the weights already in the VM page cache; `/v1/approve` 61.6 s,
 37.1 s, 98.4 s (three requests, `contracts/v1/examples/approve-request.json`, HTTP 200,
 `decision: approve`).
 

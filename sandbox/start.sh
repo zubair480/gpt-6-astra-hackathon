@@ -113,6 +113,12 @@ sbx_exec() {  # run a command inside the sandbox (policy, netns and user apply):
   # stdin must be closed: with an open stdin `sandbox exec` waits for EOF and never returns.
   openshell sandbox exec -n "$SANDBOX_NAME" --no-tty "$@" </dev/null
 }
+sbx_put() {  # copy a host file into the sandbox over the exec channel: sbx_put <host-file> <sandbox-path>
+  # `openshell sandbox upload` applies the repo .gitignore (runtime dirs are ignored -> empty tar,
+  # "ssh tar extract exited with status exit status: 2") and --no-git-ignore fails the same way in
+  # 0.0.116, so the bytes go through exec's stdin instead. Same channel, same policy.
+  openshell sandbox exec -n "$SANDBOX_NAME" --no-tty --timeout 30 -- sh -c "cat >'$2'" <"$1"
+}
 
 case "$BACKEND" in
 # ------------------------------------------------------------------------------ macos-dev
@@ -212,9 +218,7 @@ openshell)
   say "instance_id=$INSTANCE_ID"
 
   say "3/6 running deny checks INSIDE the sandbox (same netns, user and policy as the service)"
-  # DEST is a directory: the file lands at $INNER_RUNTIME/deny_check.py.
-  openshell sandbox upload "$SANDBOX_NAME" "$HERE/deny_check.py" "$INNER_RUNTIME" >/dev/null </dev/null \
-    || die "could not upload deny_check.py"
+  sbx_put "$HERE/deny_check.py" "$INNER_RUNTIME/deny_check.py" || die "could not copy deny_check.py into the sandbox"
   set +e
   sbx_exec --timeout 120 -- "$INNER_PY" "$INNER_RUNTIME/deny_check.py" \
     --backend openshell --instance-id "$INSTANCE_ID" --policy-sha256 "$POLICY_SHA" \
@@ -269,9 +273,9 @@ fi
 say "6/6 isolation VERIFIED for instance $INSTANCE_ID"
 if [ "$BACKEND" = openshell ]; then
   # The service re-reads <runtime-dir>/isolation-evidence.json on every readiness check; put the
-  # verified document where the in-sandbox service looks (upload goes over the gateway channel).
-  openshell sandbox upload "$SANDBOX_NAME" "$ISO_EVIDENCE" "$INNER_RUNTIME" >/dev/null </dev/null \
-    || die "could not upload isolation evidence into the sandbox"
+  # verified document where the in-sandbox service looks (copied over the gateway exec channel).
+  sbx_put "$ISO_EVIDENCE" "$INNER_RUNTIME/isolation-evidence.json" \
+    || die "could not copy isolation evidence into the sandbox"
   READY="$(readiness_field ready_for_private_values)"
   say "service readiness after evidence upload: ready_for_private_values=$READY"
   [ "$READY" = True ] || [ "$MOCK" = 1 ] || die "service did not flip to ready (see $RUNTIME_DIR/service readiness)"
